@@ -62,7 +62,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Return 400 for other errors
+    // Return 400 for validation errors
     return res.status(400).json({
       error: 'Bad request',
       message: error.message

@@ -51,13 +51,15 @@ const loggerMiddleware = (req, res, next) => {
               action = 'UPDATE';
           }
 
-          // Extract target collection from route path
+          // Extract target collection from the full URL path
           // Expected format: /api/collection/:id or /api/collection
-          const pathParts = req.path.split('/').filter(part => part);
+          const urlPath = req.originalUrl.split('?')[0]; // strip query string
+          const pathParts = urlPath.split('/').filter(part => part);
           let targetCollection = 'Unknown';
-          
+
+          // pathParts[0]='api', pathParts[1]='collection'
           if (pathParts.length >= 2) {
-            // Convert route name to collection name (e.g., 'users' -> 'User')
+            // Convert route name to collection name
             const routeName = pathParts[1];
             targetCollection = routeName.charAt(0).toUpperCase() + routeName.slice(1, -1);
             
@@ -117,7 +119,7 @@ const loggerMiddleware = (req, res, next) => {
               targetId,
               changes: {
                 method: req.method,
-                path: req.path,
+                path: req.originalUrl,
                 timestamp: new Date()
               }
             });

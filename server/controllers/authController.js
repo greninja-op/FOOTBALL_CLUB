@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const validator = require('validator');
 const User = require('../models/User');
 
 /**
@@ -25,6 +26,11 @@ const login = async (email, password) => {
     // Validate input
     if (!email || !password) {
       throw new Error('Email and password are required');
+    }
+
+    // Validate email format using RFC 5322 standard (Requirement 20.2)
+    if (!validator.isEmail(email)) {
+      throw new Error('Invalid email format');
     }
 
     // Find user by email and explicitly select passwordHash
@@ -64,11 +70,13 @@ const login = async (email, password) => {
     };
 
   } catch (error) {
-    // Re-throw with generic message for authentication errors
-    if (error.message === 'Invalid credentials') {
+    // Re-throw validation and credential errors as-is
+    if (error.message === 'Invalid credentials' ||
+        error.message === 'Invalid email format' ||
+        error.message === 'Email and password are required') {
       throw error;
     }
-    // For other errors, throw generic authentication error
+    // For unexpected errors, throw generic authentication error
     throw new Error('Authentication failed');
   }
 };

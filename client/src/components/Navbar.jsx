@@ -1,36 +1,54 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSocket } from '../contexts/SocketContext'
 
 const Navbar = () => {
   const { user, logout } = useAuth()
+  const { socket } = useSocket()
   const navigate = useNavigate()
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
 
   // Fetch club settings on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setSettings(data.settings)
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
-      } catch (error) {
-        console.error('Failed to fetch settings:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+      })
 
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(data.settings)
+      }
+    } catch (error) {
+      console.error('Failed to fetch settings:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchSettings()
   }, [])
+
+  // Listen for settings:updated events
+  useEffect(() => {
+    if (!socket) return
+
+    const handleSettingsUpdated = (data) => {
+      console.log('Settings updated event received:', data)
+      fetchSettings()
+    }
+
+    socket.on('settings:updated', handleSettingsUpdated)
+
+    return () => {
+      socket.off('settings:updated', handleSettingsUpdated)
+    }
+  }, [socket])
 
   const handleLogout = () => {
     logout()

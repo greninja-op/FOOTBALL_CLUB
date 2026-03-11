@@ -2,35 +2,87 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
-const { Server } = require('socket.io');
+const helmet = require('helmet');
+const compression = require('compression');
 const { connectDB } = require('./config/database');
+const { initializeSocketServer } = require('./socketServer');
+const { setIO } = require('./utils/socketIO');
+const { apiLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+
+// Initialize Socket.io server with authentication
+const io = initializeSocketServer(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true
   }
 });
 
-// Middleware
+// Register io instance for controller access
+setIO(io);
+
+// Security Middleware (Requirement 21.2, 21.3)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Response compression (Requirement 24.4)
+app.use(compression());
+
+// CORS with strict origin policy (Requirement 21.3)
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting for all API routes (Requirement 21.4)
+app.use('/api', apiLimiter);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const userRoutes = require('./routes/userRoutes');
+const systemLogRoutes = require('./routes/systemLogRoutes');
+const fixtureRoutes = require('./routes/fixtureRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const profileRoutes = require('./routes/profileRoutes');
+const disciplinaryRoutes = require('./routes/disciplinaryRoutes');
+const trainingRoutes = require('./routes/trainingRoutes');
+const injuryRoutes = require('./routes/injuryRoutes');
+const leaveRoutes = require('./routes/leaveRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/logs', systemLogRoutes);
+app.use('/api/fixtures', fixtureRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/profiles', profileRoutes);
+app.use('/api/disciplinary', disciplinaryRoutes);
+app.use('/api/training', trainingRoutes);
+app.use('/api/injuries', injuryRoutes);
+app.use('/api/leave', leaveRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {
@@ -45,14 +97,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Socket.io connection
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
+// Error handling middleware (must be AFTER all routes)
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+app.use(notFoundHandler); // 404 handler
+app.use(errorHandler); // Global error handler
 
 const PORT = process.env.PORT || 5000;
 
