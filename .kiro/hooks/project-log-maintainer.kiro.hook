@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "Project Log Maintainer",
+  "description": "Maintains PROJECT_LOG.md with chronological records of every technical change including timestamp, action type, affected files, delta summary, and next steps. Updates incrementally without duplication.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Act as Project Maintainer. Update PROJECT_LOG.md with the following structure:\n\n## [Timestamp: Current Date & Time]\n- **Action Type**: [Fixed/Created/Edited/Refactored]\n- **Scope**: [List all files affected in this session]\n- **Delta**: [Concise summary of what was added or changed]\n- **Next Steps**: [What is in-progress or planned]\n\nCRITICAL RULES:\n1. Read PROJECT_LOG.md first to see the last recorded timestamp\n2. Only append changes made SINCE the last timestamp\n3. Do NOT duplicate previous entries\n4. Compare current project state against last entry\n5. If PROJECT_LOG.md doesn't exist, create it with initial entry\n6. Keep entries concise but complete\n7. Use actual timestamps, not placeholders\n\nAnalyze the conversation history to determine what changed in this session, then append only the new entry."
+  },
+  "workspaceFolderName": "COURT JUSTICE",
+  "shortName": "project-log-maintainer"
+}

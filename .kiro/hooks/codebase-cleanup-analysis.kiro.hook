@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Codebase Cleanup & Organization",
+  "description": "Analyzes every file and line of code in the entire codebase to identify redundant files, unnecessary markdown documentation (except crucial ones), and reorganizes the project structure for optimal development workflow",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Perform a comprehensive codebase analysis:\n\n1. ANALYZE EVERY FILE: Read and understand every single file and line of code in the workspace including:\n   - All source code files (.js, .php, .py, etc.)\n   - All configuration files\n   - All markdown documentation files\n   - All Docker and deployment files\n   - All package/dependency files\n\n2. IDENTIFY REDUNDANT FILES: Find files that are:\n   - Duplicates or serve the same purpose\n   - Unused imports or dead code\n   - Outdated or deprecated\n   - Not needed for current development stage\n\n3. EVALUATE DOCUMENTATION: Review all .md files and determine:\n   - Which are crucial (README.md, critical setup docs)\n   - Which are redundant or outdated\n   - Which can be consolidated\n\n4. ORGANIZE STRUCTURE: Propose a perfect folder organization:\n   - Group related files logically\n   - Remove unnecessary nesting\n   - Ensure consistent naming conventions\n   - Create clear separation of concerns\n\n5. EXECUTE CLEANUP: Delete all identified redundant files and reorganize the remaining files into the optimal structure.\n\nProvide a detailed report of what was analyzed, what was deleted, and the new organized structure."
+  }
+}
