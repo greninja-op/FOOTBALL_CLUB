@@ -42,7 +42,6 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Indexes for performance optimization
-UserSchema.index({ email: 1 }); // Unique index for email lookups during authentication
 UserSchema.index({ role: 1 }); // Index for role-based queries
 
 // Prevent password hash from being returned in JSON responses

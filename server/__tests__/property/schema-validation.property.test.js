@@ -9,10 +9,7 @@ const LeaveRequest = require('../../models/LeaveRequest');
 describe('Property Tests: Schema Validation (Task 3.11)', () => {
   beforeAll(async () => {
     // Connect to test database
-    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test');
   });
 
   afterAll(async () => {
@@ -71,7 +68,7 @@ describe('Property Tests: Schema Validation (Task 3.11)', () => {
     it('should accept club names between 3-100 characters', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.string({ minLength: 3, maxLength: 100 }),
+          fc.string({ minLength: 3, maxLength: 100 }).filter((clubName) => clubName.trim().length >= 3),
           async (clubName) => {
             const settings = new Settings({ clubName });
             await settings.validate();
@@ -101,7 +98,7 @@ describe('Property Tests: Schema Validation (Task 3.11)', () => {
     it('should reject club names longer than 100 characters', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.string({ minLength: 101, maxLength: 200 }),
+          fc.string({ minLength: 101, maxLength: 200 }).filter((longName) => longName.trim().length > 100),
           async (longName) => {
             const settings = new Settings({ clubName: longName });
             await expect(settings.validate()).rejects.toThrow();
@@ -118,7 +115,7 @@ describe('Property Tests: Schema Validation (Task 3.11)', () => {
         fc.asyncProperty(
           fc.date({ min: new Date('2024-01-01'), max: new Date('2025-12-31') }),
           fc.integer({ min: 0, max: 365 }),
-          fc.string({ minLength: 10, maxLength: 200 }),
+          fc.string({ minLength: 10, maxLength: 200 }).filter((reason) => reason.trim().length >= 10),
           async (startDate, daysToAdd, reason) => {
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + daysToAdd);
@@ -166,8 +163,8 @@ describe('Property Tests: Schema Validation (Task 3.11)', () => {
     it('should accept ratings between 0-10', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.float({ min: 0, max: 10 }),
-          fc.string({ minLength: 3, maxLength: 50 }),
+          fc.float({ min: 0, max: 10, noNaN: true, noDefaultInfinity: true }),
+          fc.string({ minLength: 3, maxLength: 50 }).filter((fullName) => fullName.trim().length >= 2),
           async (rating, fullName) => {
             const profile = new Profile({
               userId: new mongoose.Types.ObjectId(),
@@ -193,10 +190,10 @@ describe('Property Tests: Schema Validation (Task 3.11)', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.oneof(
-            fc.float({ min: -100, max: -0.1 }),
-            fc.float({ min: 10.1, max: 100 })
+            fc.float({ min: -100, max: -Math.fround(0.1), noNaN: true, noDefaultInfinity: true }),
+            fc.float({ min: Math.fround(10.1), max: 100, noNaN: true, noDefaultInfinity: true })
           ),
-          fc.string({ minLength: 3, maxLength: 50 }),
+          fc.string({ minLength: 3, maxLength: 50 }).filter((fullName) => fullName.trim().length >= 2),
           async (invalidRating, fullName) => {
             const profile = new Profile({
               userId: new mongoose.Types.ObjectId(),

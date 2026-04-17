@@ -1,0 +1,76 @@
+\contentsline {chapter}{\numberline {1}INTRODUCTION}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Project Overview}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Problem Statement}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Project Objectives}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Scope of the Project}{2}{section.1.4}%
+\contentsline {chapter}{\numberline {2}SYSTEM SPECIFICATIONS}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Software Specification}{4}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Hardware Specification}{5}{section.2.2}%
+\contentsline {chapter}{\numberline {3}SYSTEM ANALYSIS}{6}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Existing System}{6}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Proposed System}{6}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Feasibility Study}{7}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Technical Feasibility}{7}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Economic Feasibility}{7}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Operational Feasibility}{7}{subsection.3.3.3}%
+\contentsline {chapter}{\numberline {4}SYSTEM DESIGN}{8}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Data Flow Diagrams}{8}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Level 0 --- Context Diagram}{8}{subsection.4.1.1}%
+\contentsline {subsection}{\numberline {4.1.2}Level 1 --- Admin Module DFD}{9}{subsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.1.3}Level 1 --- Manager Module DFD}{9}{subsection.4.1.3}%
+\contentsline {subsection}{\numberline {4.1.4}Level 1 --- Coach Module DFD}{10}{subsection.4.1.4}%
+\contentsline {subsection}{\numberline {4.1.5}Level 1 --- Player Module DFD}{10}{subsection.4.1.5}%
+\contentsline {section}{\numberline {4.2}Entity Relationship Diagram}{11}{section.4.2}%
+\contentsline {chapter}{\numberline {5}TABLE DESIGN}{12}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Users Collection}{12}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Profiles Collection}{12}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Players Collection}{13}{section.5.3}%
+\contentsline {section}{\numberline {5.4}ClubMemberships Collection}{13}{section.5.4}%
+\contentsline {section}{\numberline {5.5}SeasonStats Collection}{13}{section.5.5}%
+\contentsline {section}{\numberline {5.6}ArchivedPlayers Collection}{13}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Fixtures Collection}{14}{section.5.7}%
+\contentsline {section}{\numberline {5.8}TrainingSessions Collection}{14}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Injuries Collection}{14}{section.5.9}%
+\contentsline {section}{\numberline {5.10}LeaveRequests Collection}{14}{section.5.10}%
+\contentsline {section}{\numberline {5.11}DisciplinaryActions Collection}{14}{section.5.11}%
+\contentsline {section}{\numberline {5.12}Documents Collection}{14}{section.5.12}%
+\contentsline {section}{\numberline {5.13}Inventories Collection}{15}{section.5.13}%
+\contentsline {section}{\numberline {5.14}Settings Collection (Singleton)}{15}{section.5.14}%
+\contentsline {section}{\numberline {5.15}SystemLogs Collection (Immutable)}{15}{section.5.15}%
+\contentsline {chapter}{\numberline {6}MODULE DESIGN AND IMPLEMENTATION}{16}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Login Page}{16}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Admin Module}{16}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}User Management}{16}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Player Archive}{17}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Club Settings}{17}{subsection.6.2.3}%
+\contentsline {subsection}{\numberline {6.2.4}System Logs}{17}{subsection.6.2.4}%
+\contentsline {section}{\numberline {6.3}Manager Module}{17}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Fixtures}{17}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Contracts}{17}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Document Vault}{17}{subsection.6.3.3}%
+\contentsline {subsection}{\numberline {6.3.4}Inventory}{17}{subsection.6.3.4}%
+\contentsline {subsection}{\numberline {6.3.5}Finance Dashboard}{18}{subsection.6.3.5}%
+\contentsline {section}{\numberline {6.4}Coach Module}{18}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}Tactical Board}{18}{subsection.6.4.1}%
+\contentsline {subsection}{\numberline {6.4.2}Training Schedule}{18}{subsection.6.4.2}%
+\contentsline {subsection}{\numberline {6.4.3}Squad Health}{18}{subsection.6.4.3}%
+\contentsline {subsection}{\numberline {6.4.4}Discipline}{18}{subsection.6.4.4}%
+\contentsline {subsection}{\numberline {6.4.5}Leave Approval}{18}{subsection.6.4.5}%
+\contentsline {subsection}{\numberline {6.4.6}Performance Tracking}{18}{subsection.6.4.6}%
+\contentsline {section}{\numberline {6.5}Player Module}{18}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}Personalized Dashboard}{19}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}Calendar}{19}{subsection.6.5.2}%
+\contentsline {subsection}{\numberline {6.5.3}Leave Requests}{19}{subsection.6.5.3}%
+\contentsline {section}{\numberline {6.6}AI-Powered Features}{19}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}OCR Document Scanner}{19}{subsection.6.6.1}%
+\contentsline {subsection}{\numberline {6.6.2}AI Document Preparation}{19}{subsection.6.6.2}%
+\contentsline {subsection}{\numberline {6.6.3}AI Chatbot}{19}{subsection.6.6.3}%
+\contentsline {subsection}{\numberline {6.6.4}Text Summarization}{19}{subsection.6.6.4}%
+\contentsline {chapter}{\numberline {7}SECURITY MEASURES}{20}{chapter.7}%
+\contentsline {chapter}{\numberline {8}SYSTEM TESTING}{22}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Unit Testing}{22}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Integration Testing}{22}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Test Cases}{22}{section.8.3}%
+\contentsline {section}{\numberline {8.4}User Acceptance Testing}{23}{section.8.4}%
+\contentsline {chapter}{\numberline {9}SCOPE FOR FUTURE ENHANCEMENT}{25}{chapter.9}%
+\contentsline {chapter}{\numberline {10}CONCLUSION}{26}{chapter.10}%

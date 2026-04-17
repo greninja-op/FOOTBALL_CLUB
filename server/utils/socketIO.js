@@ -1,44 +1,56 @@
 /**
  * Socket.IO Instance Manager
- * 
- * This module provides a centralized way to access the Socket.io instance
- * from any controller or module in the application.
- * 
- * Validates Requirements: 18.1
- * 
- * Usage in controllers:
- * const { getIO } = require('../utils/socketIO');
- * const io = getIO();
- * io.emit('event:name', data);
- * 
- * @module utils/socketIO
  */
 
 let io = null;
+const activeUsers = new Map();
 
-/**
- * Set the Socket.io instance
- * This should be called once during server initialization
- * 
- * @param {SocketIO.Server} ioInstance - The Socket.io server instance
- */
 function setIO(ioInstance) {
   io = ioInstance;
-  console.log('✓ Socket.io instance registered for controller access');
+  console.log('Socket.io instance registered for controller access');
 }
 
-/**
- * Get the Socket.io instance
- * This can be called from any controller to emit events
- * 
- * @returns {SocketIO.Server} The Socket.io server instance
- * @throws {Error} If Socket.io has not been initialized
- */
 function getIO() {
   if (!io) {
     throw new Error('Socket.io has not been initialized. Call setIO() first.');
   }
+
   return io;
 }
 
-module.exports = { setIO, getIO };
+function setUserOnline(userId, socketId) {
+  const key = String(userId);
+  const sockets = activeUsers.get(key) || new Set();
+  sockets.add(socketId);
+  activeUsers.set(key, sockets);
+}
+
+function setUserOffline(userId, socketId) {
+  const key = String(userId);
+  const sockets = activeUsers.get(key);
+
+  if (!sockets) {
+    return;
+  }
+
+  sockets.delete(socketId);
+
+  if (sockets.size === 0) {
+    activeUsers.delete(key);
+    return;
+  }
+
+  activeUsers.set(key, sockets);
+}
+
+function getOnlineUserIds() {
+  return Array.from(activeUsers.keys());
+}
+
+module.exports = {
+  setIO,
+  getIO,
+  setUserOnline,
+  setUserOffline,
+  getOnlineUserIds,
+};

@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import PlayerSpotlightCard from './PlayerSpotlightCard';
+
+const matchesAnyId = (candidate, ids) => {
+  if (!candidate) return false;
+  return ids.some((id) => id && String(id) === String(candidate));
+};
 
 const PlayerDashboard = () => {
   const { token, user } = useAuth();
@@ -23,9 +29,18 @@ const PlayerDashboard = () => {
   useEffect(() => {
     if (!socket || !profile) return;
 
+    const profileIds = [
+      profile._id,
+      profile.id,
+      profile.userId?._id,
+      profile.userId,
+      profile.playerDomain?.playerId,
+      user?.id
+    ];
+
     const handleFineIssued = (data) => {
       console.log('Fine issued event received:', data);
-      if (data.playerId === profile._id) {
+      if (matchesAnyId(data.playerId, profileIds)) {
         showToast('A fine has been issued to you', 'warning');
         fetchPlayerData();
       }
@@ -33,7 +48,7 @@ const PlayerDashboard = () => {
 
     const handleInjuryLogged = (data) => {
       console.log('Injury logged event received:', data);
-      if (data.playerId === profile._id) {
+      if (matchesAnyId(data.playerId, profileIds)) {
         showToast('An injury has been logged', 'warning');
         fetchPlayerData();
       }
@@ -41,7 +56,7 @@ const PlayerDashboard = () => {
 
     const handleStatsUpdated = (data) => {
       console.log('Stats updated event received:', data);
-      if (data.playerId === profile._id) {
+      if (matchesAnyId(data.playerId, profileIds)) {
         showToast('Your stats have been updated', 'success');
         fetchPlayerData();
       }
@@ -49,7 +64,7 @@ const PlayerDashboard = () => {
 
     const handleInventoryAssigned = (data) => {
       console.log('Inventory assigned event received:', data);
-      if (data.playerId === profile._id) {
+      if (matchesAnyId(data.playerId, profileIds)) {
         showToast('New equipment has been assigned to you', 'success');
         fetchPlayerData();
       }
@@ -72,7 +87,7 @@ const PlayerDashboard = () => {
     try {
       // Fetch profile
       const profileRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/profiles/${user.id}`,
+        `${import.meta.env.VITE_API_URL}/api/profiles/me`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -144,13 +159,13 @@ const PlayerDashboard = () => {
   };
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-4 text-gray-300">Loading...</div>;
   }
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+      <div className="p-4">
+        <div className="bg-red-900/40 border border-red-500/30 text-red-200 px-3 py-2 rounded text-sm">
           {error}
         </div>
       </div>
@@ -158,38 +173,59 @@ const PlayerDashboard = () => {
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">My Dashboard</h2>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4 text-white">My Dashboard</h2>
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`mb-4 p-4 rounded ${
-          toast.type === 'error' ? 'bg-red-100 text-red-700' :
-          toast.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-          'bg-green-100 text-green-700'
+        <div className={`mb-4 p-3 rounded text-sm ${
+          toast.type === 'error' ? 'bg-red-900/40 border border-red-500/30 text-red-200' :
+          toast.type === 'warning' ? 'bg-yellow-900/40 border border-yellow-500/30 text-yellow-200' :
+          'bg-green-900/40 border border-green-500/30 text-green-200'
         }`}>
           {toast.message}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Profile Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Profile</h3>
+        <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+          <h3 className="text-sm font-semibold mb-3 text-white">Profile</h3>
           {profile && (
             <div>
-              <div className="mb-4">
-                <div className="text-2xl font-bold">{profile.fullName}</div>
-                <div className="text-gray-600">{profile.position}</div>
+              <div className="mb-6">
+                <PlayerSpotlightCard player={profile} />
               </div>
 
-              <div className="space-y-2">
+              <div className="mb-3">
+                <div className="text-lg font-bold text-white">{profile.fullName}</div>
+                <div className="text-gray-400 text-sm">{profile.displayPosition || profile.position}</div>
+              </div>
+
+              <div className="space-y-1.5 text-sm">
+                {profile.playerDomain?.activeMembership?.jerseyNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Jersey Number:</span>
+                    <span className="text-white">#{profile.playerDomain.activeMembership.jerseyNumber}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Fitness Status:</span>
-                  <span className={`px-3 py-1 rounded text-sm font-semibold ${
-                    profile.fitnessStatus === 'Green' ? 'bg-green-100 text-green-800' :
-                    profile.fitnessStatus === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
+                  <span className="text-gray-400">Player Status:</span>
+                  <span className="text-white">{profile.playerDomain?.status || profile.playerStatus || 'active'}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Availability:</span>
+                  <span className="text-white">{profile.availabilityStatus || 'available'}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fitness Status:</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    profile.fitnessStatus === 'Green' ? 'bg-green-900/40 text-green-200 border border-green-500/30' :
+                    profile.fitnessStatus === 'Yellow' ? 'bg-yellow-900/40 text-yellow-200 border border-yellow-500/30' :
+                    'bg-red-900/40 text-red-200 border border-red-500/30'
                   }`}>
                     {profile.fitnessStatus}
                   </span>
@@ -197,30 +233,37 @@ const PlayerDashboard = () => {
 
                 {profile.weight && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Weight:</span>
-                    <span>{profile.weight} kg</span>
+                    <span className="text-gray-400">Weight:</span>
+                    <span className="text-white">{profile.weight} kg</span>
                   </div>
                 )}
 
                 {profile.height && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Height:</span>
-                    <span>{profile.height} cm</span>
+                    <span className="text-gray-400">Height:</span>
+                    <span className="text-white">{profile.height} cm</span>
                   </div>
                 )}
 
-                {profile.contractType && (
+                {profile.playerDomain?.activeMembership?.squadRole && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Contract Type:</span>
-                    <span>{profile.contractType}</span>
+                    <span className="text-gray-400">Squad Role:</span>
+                    <span className="text-white capitalize">{profile.playerDomain.activeMembership.squadRole}</span>
                   </div>
                 )}
 
-                {profile.contractStart && profile.contractEnd && (
+                {profile.contract?.contractType && (
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Contract Period:</span>
-                    <span>
-                      {new Date(profile.contractStart).toLocaleDateString()} - {new Date(profile.contractEnd).toLocaleDateString()}
+                    <span className="text-gray-400">Contract Type:</span>
+                    <span className="text-white">{profile.contract.contractType}</span>
+                  </div>
+                )}
+
+                {profile.contract?.contractStart && profile.contract?.contractEnd && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Contract Period:</span>
+                    <span className="text-white text-xs">
+                      {new Date(profile.contract.contractStart).toLocaleDateString()} - {new Date(profile.contract.contractEnd).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -230,44 +273,56 @@ const PlayerDashboard = () => {
         </div>
 
         {/* Performance Stats */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Performance Statistics</h3>
+        <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+          <h3 className="text-sm font-semibold mb-3 text-white">Performance Statistics</h3>
           {profile?.stats && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded">
-                <div className="text-3xl font-bold text-blue-600">{profile.stats.goals || 0}</div>
-                <div className="text-sm text-gray-600">Goals</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-blue-900/40 border border-blue-500/30 rounded">
+                <div className="text-2xl font-bold text-blue-200">{profile.stats.goals || 0}</div>
+                <div className="text-xs text-gray-400">Goals</div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded">
-                <div className="text-3xl font-bold text-green-600">{profile.stats.assists || 0}</div>
-                <div className="text-sm text-gray-600">Assists</div>
+              <div className="text-center p-3 bg-green-900/40 border border-green-500/30 rounded">
+                <div className="text-2xl font-bold text-green-200">{profile.stats.assists || 0}</div>
+                <div className="text-xs text-gray-400">Assists</div>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded">
-                <div className="text-3xl font-bold text-purple-600">{profile.stats.appearances || 0}</div>
-                <div className="text-sm text-gray-600">Appearances</div>
+              <div className="text-center p-3 bg-purple-900/40 border border-purple-500/30 rounded">
+                <div className="text-2xl font-bold text-purple-200">{profile.stats.appearances || 0}</div>
+                <div className="text-xs text-gray-400">Appearances</div>
               </div>
-              <div className="text-center p-4 bg-yellow-50 rounded">
-                <div className="text-3xl font-bold text-yellow-600">{profile.stats.rating?.toFixed(1) || '0.0'}</div>
-                <div className="text-sm text-gray-600">Rating</div>
+              <div className="text-center p-3 bg-yellow-900/40 border border-yellow-500/30 rounded">
+                <div className="text-2xl font-bold text-yellow-200">{profile.stats.rating?.toFixed(1) || '0.0'}</div>
+                <div className="text-xs text-gray-400">Rating</div>
+              </div>
+              <div className="text-center p-3 bg-sky-900/40 border border-sky-500/30 rounded">
+                <div className="text-2xl font-bold text-sky-200">{profile.stats.minutes || 0}</div>
+                <div className="text-xs text-gray-400">Minutes</div>
+              </div>
+              <div className="text-center p-3 bg-amber-900/40 border border-amber-500/30 rounded">
+                <div className="text-2xl font-bold text-amber-200">{profile.stats.yellowCards || 0}</div>
+                <div className="text-xs text-gray-400">Yellow Cards</div>
+              </div>
+              <div className="text-center p-3 bg-rose-900/40 border border-rose-500/30 rounded">
+                <div className="text-2xl font-bold text-rose-200">{profile.stats.redCards || 0}</div>
+                <div className="text-xs text-gray-400">Red Cards</div>
               </div>
             </div>
           )}
         </div>
 
         {/* Assigned Equipment */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">My Equipment</h3>
+        <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+          <h3 className="text-sm font-semibold mb-3 text-white">My Equipment</h3>
           {equipment.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No equipment assigned</p>
+            <p className="text-gray-400 text-center py-4 text-sm">No equipment assigned</p>
           ) : (
             <div className="space-y-2">
               {equipment.map(item => (
-                <div key={item._id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div key={item._id} className="flex justify-between items-center p-2.5 bg-gray-700/20 rounded">
                   <div>
-                    <div className="font-medium">{item.itemName}</div>
-                    <div className="text-sm text-gray-600">{item.itemType}</div>
+                    <div className="font-medium text-white text-sm">{item.itemName}</div>
+                    <div className="text-xs text-gray-400">{item.itemType}</div>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs text-gray-500">
                     Assigned: {new Date(item.assignedAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -277,24 +332,24 @@ const PlayerDashboard = () => {
         </div>
 
         {/* Active Injuries */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Active Injuries</h3>
+        <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
+          <h3 className="text-sm font-semibold mb-3 text-white">Active Injuries</h3>
           {injuries.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No active injuries</p>
+            <p className="text-gray-400 text-center py-4 text-sm">No active injuries</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {injuries.map(injury => (
-                <div key={injury._id} className="p-3 bg-red-50 border border-red-200 rounded">
-                  <div className="font-medium text-red-800">{injury.injuryType}</div>
-                  <div className="text-sm text-gray-600 mt-1">
+                <div key={injury._id} className="p-2.5 bg-red-900/40 border border-red-500/30 rounded">
+                  <div className="font-medium text-red-200 text-sm">{injury.injuryType}</div>
+                  <div className="text-xs text-gray-400 mt-1">
                     Severity: <span className={`font-semibold ${
-                      injury.severity === 'Minor' ? 'text-yellow-600' :
-                      injury.severity === 'Moderate' ? 'text-orange-600' :
-                      'text-red-600'
+                      injury.severity === 'Minor' ? 'text-yellow-400' :
+                      injury.severity === 'Moderate' ? 'text-orange-400' :
+                      'text-red-400'
                     }`}>{injury.severity}</span>
                   </div>
                   {injury.expectedRecovery && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs text-gray-400">
                       Expected Recovery: {new Date(injury.expectedRecovery).toLocaleDateString()}
                     </div>
                   )}
@@ -305,28 +360,28 @@ const PlayerDashboard = () => {
         </div>
 
         {/* Pending Fines */}
-        <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold mb-4">Pending Fines</h3>
+        <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold mb-3 text-white">Pending Fines</h3>
           {fines.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No pending fines</p>
+            <p className="text-gray-400 text-center py-4 text-sm">No pending fines</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {fines.map(fine => (
-                <div key={fine._id} className="flex justify-between items-center p-4 bg-yellow-50 border border-yellow-200 rounded">
+                <div key={fine._id} className="flex justify-between items-center p-3 bg-yellow-900/40 border border-yellow-500/30 rounded">
                   <div>
-                    <div className="font-medium">{fine.offense}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="font-medium text-white text-sm">{fine.offense}</div>
+                    <div className="text-xs text-gray-400">
                       Issued: {new Date(fine.dateIssued).toLocaleDateString()}
                     </div>
                   </div>
-                  <div className="text-xl font-bold text-yellow-700">
+                  <div className="text-lg font-bold text-yellow-200">
                     ${fine.fineAmount?.toLocaleString()}
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between items-center p-4 bg-gray-100 rounded font-bold">
-                <span>Total Pending:</span>
-                <span className="text-xl text-red-600">
+              <div className="flex justify-between items-center p-3 bg-gray-700/20 rounded font-bold">
+                <span className="text-white text-sm">Total Pending:</span>
+                <span className="text-lg text-red-400">
                   ${fines.reduce((sum, fine) => sum + (fine.fineAmount || 0), 0).toLocaleString()}
                 </span>
               </div>

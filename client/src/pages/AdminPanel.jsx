@@ -1,64 +1,126 @@
-import { useState } from 'react';
-import Navbar from '../components/Navbar';
+import { useEffect, useRef, useState } from 'react';
 import UserManagement from '../components/UserManagement';
 import ClubSettings from '../components/ClubSettings';
 import SystemLogs from '../components/SystemLogs';
+import PlayerArchiveManager from '../components/PlayerArchiveManager';
+import PanelShell from '../components/PanelShell';
+
+const SECTION_OFFSET = 150;
+const NAV_HEIGHT = 88;
 
 const AdminPanel = () => {
-  const [activeTab, setActiveTab] = useState('users');
-  const [accessDenied, setAccessDenied] = useState(false);
+  const [activeSection, setActiveSection] = useState('users');
 
-  const tabs = [
-    { id: 'users', label: 'User Management', component: UserManagement },
-    { id: 'settings', label: 'Club Settings', component: ClubSettings },
-    { id: 'logs', label: 'System Logs', component: SystemLogs }
+  const usersRef = useRef(null);
+  const archiveRef = useRef(null);
+  const settingsRef = useRef(null);
+  const logsRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = [
+        { id: 'users', ref: usersRef },
+        { id: 'archive', ref: archiveRef },
+        { id: 'settings', ref: settingsRef },
+        { id: 'logs', ref: logsRef },
+      ];
+
+      const scrollPosition = window.scrollY + SECTION_OFFSET;
+
+      for (const section of sections) {
+        const element = section.ref.current;
+        if (!element) continue;
+
+        const { offsetTop, offsetHeight } = element;
+        if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+          setActiveSection(section.id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToSection = (sectionId) => {
+    const refs = {
+      users: usersRef,
+      archive: archiveRef,
+      settings: settingsRef,
+      logs: logsRef,
+    };
+
+    const element = refs[sectionId]?.current;
+    if (!element) return;
+
+    window.scrollTo({
+      top: element.offsetTop - NAV_HEIGHT,
+      behavior: 'smooth',
+    });
+  };
+
+  const menuItems = [
+    { id: 'users', label: 'USER MANAGEMENT' },
+    { id: 'archive', label: 'PLAYER ARCHIVE' },
+    { id: 'settings', label: 'CLUB SETTINGS' },
+    { id: 'logs', label: 'SYSTEM LOGS' },
   ];
 
-  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {accessDenied ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <h2 className="text-2xl font-bold text-red-800 mb-2">Access Denied</h2>
-            <p className="text-red-600">
-              You do not have permission to access this resource.
-            </p>
+    <PanelShell
+      menuItems={menuItems}
+      activeSection={activeSection}
+      onMenuClick={scrollToSection}
+    >
+      <main className="panel-shell-main">
+        <section ref={usersRef} id="users" className="panel-section">
+          <div className="panel-section-heading">
+            <span className="panel-section-kicker">Administration</span>
+            <h1 className="panel-section-title">User Management</h1>
+            <p className="panel-section-copy">Create, edit, and control system access without cramped overlays or clipped forms.</p>
           </div>
-        ) : (
-          <>
-            {/* Tab Navigation */}
-            <div className="bg-white rounded-lg shadow mb-6">
-              <div className="border-b border-gray-200">
-                <nav className="flex -mb-px">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === tab.id
-                          ? 'border-blue-600 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </nav>
-              </div>
+          <div className="panel-card">
+            <UserManagement />
+          </div>
+        </section>
 
-              {/* Tab Content */}
-              <div>
-                {ActiveComponent && <ActiveComponent />}
-              </div>
-            </div>
-          </>
-        )}
+        <section ref={archiveRef} id="archive" className="panel-section">
+          <div className="panel-section-heading">
+            <span className="panel-section-kicker">Player Lifecycle</span>
+            <h2 className="panel-section-title">Player Archive</h2>
+            <p className="panel-section-copy">Archive and reinstate records from a dedicated floating workspace.</p>
+          </div>
+          <div className="panel-card">
+            <PlayerArchiveManager />
+          </div>
+        </section>
+
+        <section ref={settingsRef} id="settings" className="panel-section">
+          <div className="panel-section-heading">
+            <span className="panel-section-kicker">Club Identity</span>
+            <h2 className="panel-section-title">Club Settings</h2>
+            <p className="panel-section-copy">Keep homepage content, visual identity, and club details aligned in one place.</p>
+          </div>
+          <div className="panel-card">
+            <ClubSettings />
+          </div>
+        </section>
+
+        <section ref={logsRef} id="logs" className="panel-section">
+          <div className="panel-section-heading">
+            <span className="panel-section-kicker">Security</span>
+            <h2 className="panel-section-title">System Logs</h2>
+            <p className="panel-section-copy">Review live presence, login history, and the audit trail without leaving the admin shell.</p>
+          </div>
+          <div className="panel-card">
+            <SystemLogs />
+          </div>
+        </section>
       </main>
-    </div>
+    </PanelShell>
   );
 };
 

@@ -8,7 +8,8 @@ const {
   approveRequest,
   denyRequest,
   getPlayerRequests,
-  getPendingRequests
+  getPendingRequests,
+  getApprovedRequests
 } = require('../controllers/leaveController');
 
 // POST /api/leave - Submit leave request (Player only)
@@ -41,6 +42,14 @@ router.get(
     // For coach/admin, show pending requests
     return getPendingRequests(req, res);
   }
+);
+
+// GET /api/leave/pending - Get pending requests (Coach, Admin)
+router.get(
+  '/approved',
+  authMiddleware,
+  requireRole(['coach', 'admin']),
+  getApprovedRequests
 );
 
 // GET /api/leave/pending - Get pending requests (Coach, Admin)

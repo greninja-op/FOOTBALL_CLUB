@@ -17,7 +17,10 @@ const server = http.createServer(app);
 // Initialize Socket.io server with authentication
 const io = initializeSocketServer(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:5173',
+      'http://localhost:5174' // Allow alternate port if 5173 is in use
+    ],
     credentials: true
   }
 });
@@ -43,7 +46,10 @@ app.use(compression());
 
 // CORS with strict origin policy (Requirement 21.3)
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'http://localhost:5174' // Allow alternate port if 5173 is in use
+  ],
   credentials: true
 }));
 
@@ -69,6 +75,8 @@ const disciplinaryRoutes = require('./routes/disciplinaryRoutes');
 const trainingRoutes = require('./routes/trainingRoutes');
 const injuryRoutes = require('./routes/injuryRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
+const playerDomainRoutes = require('./routes/playerDomainRoutes');
+const publicRoutes = require('./routes/publicRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -83,6 +91,8 @@ app.use('/api/disciplinary', disciplinaryRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/injuries', injuryRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/player-domain', playerDomainRoutes);
+app.use('/api/public', publicRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {

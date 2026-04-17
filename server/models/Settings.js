@@ -18,6 +18,76 @@ const SettingsSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  homepageHeadline: {
+    type: String,
+    trim: true,
+    default: 'Season in Motion'
+  },
+  clubDescription: {
+    type: String,
+    trim: true,
+    default: 'A modern football club built on discipline, identity, and long-term player development.'
+  },
+  founded: {
+    type: Number,
+    default: 1987
+  },
+  ground: {
+    type: String,
+    trim: true,
+    default: 'Club Stadium'
+  },
+  league: {
+    type: String,
+    trim: true,
+    default: 'Premier Division'
+  },
+  contactEmail: {
+    type: String,
+    trim: true,
+    default: 'hello@club.com'
+  },
+  socialHandle: {
+    type: String,
+    trim: true,
+    default: '@clubofficial'
+  },
+  trophies: {
+    type: [
+      {
+        competitionName: { type: String, required: true },
+        seasonIdentifier: { type: String },
+        trophyAsset: { type: String },
+        year: { type: String, required: true },
+        manager: { type: String },
+        captain: { type: String },
+        finalResult: { type: String },
+        playersInvolved: [
+          {
+            name: { type: String },
+            avatarUrl: { type: String }
+          }
+        ],
+        reportUrl: { type: String }
+      }
+    ],
+    default: [
+      {
+        competitionName: 'PREMIER LEAGUE CHAMPIONS',
+        seasonIdentifier: 'SEASON 2025/26',
+        year: '2026',
+        manager: 'J. Guardiola',
+        captain: 'Kevin De Bruyne',
+        finalResult: '3-1 vs Man City',
+        playersInvolved: [
+          { name: 'Haaland', avatarUrl: '' },
+          { name: 'Foden', avatarUrl: '' },
+          { name: 'Bernardo', avatarUrl: '' }
+        ],
+        reportUrl: '/reports/2026-pl'
+      }
+    ]
+  },
   updatedAt: {
     type: Date,
     default: Date.now

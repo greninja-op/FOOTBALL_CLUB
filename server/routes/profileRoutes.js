@@ -13,6 +13,20 @@ const loggerMiddleware = require('../middleware/loggerMiddleware');
  */
 
 /**
+ * GET /api/profiles
+ * Get all profiles
+ *
+ * @access Admin, Manager, Coach
+ */
+router.get('/', authMiddleware, requireRole(['admin', 'manager', 'coach']), profileController.getAllProfiles);
+
+/**
+ * GET /api/profiles/me
+ * Get the authenticated user's own profile.
+ */
+router.get('/me', authMiddleware, profileController.getProfile);
+
+/**
  * GET /api/profiles/:userId
  * Get profile by user ID
  * 
@@ -90,6 +104,14 @@ router.get('/:userId', authMiddleware, (req, res, next) => {
  * Validates Requirements: 6.6
  */
 router.put('/:userId', authMiddleware, requireRole(['admin', 'manager']), loggerMiddleware, profileController.updateProfile);
+
+/**
+ * POST /api/profiles/:userId/notes
+ * Add a private performance note
+ *
+ * @access Coach, Admin
+ */
+router.post('/:userId/notes', authMiddleware, requireRole(['coach', 'admin']), loggerMiddleware, profileController.addPerformanceNote);
 
 /**
  * PUT /api/profiles/:userId/fitness

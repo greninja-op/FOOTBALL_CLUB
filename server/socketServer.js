@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { setUserOnline, setUserOffline } = require('./utils/socketIO');
 
 /**
  * Socket.io Server Configuration with Authentication
@@ -67,9 +68,11 @@ function initializeSocketServer(server, corsOptions) {
   // Handle socket connections
   io.on('connection', (socket) => {
     console.log(`Client connected: ${socket.id} (User: ${socket.userId}, Role: ${socket.userRole})`);
+    setUserOnline(socket.userId, socket.id);
 
     // Handle disconnection
     socket.on('disconnect', (reason) => {
+      setUserOffline(socket.userId, socket.id);
       console.log(`Client disconnected: ${socket.id} (Reason: ${reason})`);
     });
 

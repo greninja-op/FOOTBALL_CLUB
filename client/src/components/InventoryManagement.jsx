@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import FloatingNotice from './FloatingNotice'
+
+const getDisplayPosition = (player) => (
+  player.playerDomain?.activeMembership?.primaryPosition
+  || player.preferredPosition
+  || player.position
+  || 'N/A'
+)
 
 const InventoryManagement = () => {
   const { token } = useAuth()
@@ -7,10 +15,11 @@ const InventoryManagement = () => {
   const [players, setPlayers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [toast, setToast] = useState(null)
+  const [activeTab, setActiveTab] = useState('stock')
 
   // Fetch inventory
   const fetchInventory = async () => {
@@ -118,7 +127,12 @@ const InventoryManagement = () => {
   }
 
   // Get player name by ID
-  const getPlayerName = (playerId) => {
+  const getPlayerName = (playerRef) => {
+    if (playerRef?.fullName) {
+      return playerRef.fullName
+    }
+
+    const playerId = playerRef?._id || playerRef
     const player = players.find(p => p._id === playerId)
     return player ? player.fullName : 'Unknown'
   }
@@ -128,43 +142,72 @@ const InventoryManagement = () => {
     return item.assignedTo && !item.returnedAt
   }
 
+  const visibleInventory = inventory.filter((item) => (
+    activeTab === 'allocations' ? isAssigned(item) : true
+  ))
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-gray-800/40 backdrop-blur-sm rounded-lg shadow border border-white/10 p-4">
+      <FloatingNotice message={toast?.message || error} type={toast?.type || 'error'} />
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-xl font-bold text-white">Inventory Management</h2>
+          <p className="text-xs text-gray-300 mt-1">
             Track equipment and assignments
           </p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+          onClick={() => setShowCreateForm((current) => !current)}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition"
         >
-          Add Item
+          {showCreateForm ? 'Close Form' : 'Add Item'}
         </button>
       </div>
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className={`mb-4 p-4 rounded ${
-          toast.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-        }`}>
-          {toast.message}
+      <div className="ui-inline-expand mb-4" data-open={showCreateForm}>
+        <div className="ui-expand-card p-6">
+          <CreateItemPanel
+            onClose={() => setShowCreateForm(false)}
+            onSuccess={() => {
+              setShowCreateForm(false)
+              fetchInventory()
+              showToast('Item created successfully')
+            }}
+            onError={(msg) => showToast(msg, 'error')}
+          />
         </div>
-      )}
+      </div>
+
+      <div className="mb-4 flex gap-2">
+        {[
+          { id: 'stock', label: 'Stock Room' },
+          { id: 'allocations', label: 'Allocations' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-full border px-4 py-2 text-sm transition ${
+              activeTab === tab.id
+                ? 'border-red-500/40 bg-red-600/80 text-white'
+                : 'border-white/15 bg-gray-700/30 text-gray-300 hover:bg-gray-700/50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* Loading State */}
       {loading && (
         <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading inventory...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          <p className="mt-2 text-gray-300">Loading inventory...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && !loading && (
-        <div className="bg-red-100 text-red-700 p-4 rounded">
+        <div className="bg-red-900/40 text-red-200 p-4 rounded border border-red-500/30">
           {error}
         </div>
       )}
@@ -173,85 +216,89 @@ const InventoryManagement = () => {
       {!loading && !error && (
         <div className="overflow-x-auto">
           {inventory.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
+            <p className="text-gray-400 text-center py-8 bg-gray-800/20 rounded border border-white/10">
               No inventory items found. Add your first item to get started.
             </p>
+          ) : visibleInventory.length === 0 ? (
+            <p className="text-gray-400 text-center py-8 bg-gray-800/20 rounded border border-white/10">
+              No active equipment allocations yet.
+            </p>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-white/10">
+              <thead className="bg-gray-900/40">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Item Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Assigned To
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Assignment Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {inventory.map((item) => (
-                  <tr key={item._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+              <tbody className="bg-gray-800/20 divide-y divide-white/10">
+                {visibleInventory.map((item) => (
+                  <tr key={item._id} className="hover:bg-gray-700/20">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">
                         {item.itemName}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        item.itemType === 'Jersey' ? 'bg-blue-100 text-blue-700' :
-                        item.itemType === 'Boots' ? 'bg-green-100 text-green-700' :
-                        item.itemType === 'Training Equipment' ? 'bg-purple-100 text-purple-700' :
-                        item.itemType === 'Medical' ? 'bg-red-100 text-red-700' :
-                        'bg-gray-100 text-gray-700'
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded border ${
+                        item.itemType === 'Jersey' ? 'bg-blue-900/40 text-blue-200 border-blue-500/30' :
+                        item.itemType === 'Boots' ? 'bg-green-900/40 text-green-200 border-green-500/30' :
+                        item.itemType === 'Training Equipment' ? 'bg-purple-900/40 text-purple-200 border-purple-500/30' :
+                        item.itemType === 'Medical' ? 'bg-red-900/40 text-red-200 border-red-500/30' :
+                        'bg-gray-700/40 text-gray-300 border-gray-500/30'
                       }`}>
                         {item.itemType}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm text-gray-300">
                         {item.assignedTo ? getPlayerName(item.assignedTo) : '-'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="text-sm text-gray-300">
                         {formatDate(item.assignedAt)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       {isAssigned(item) ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-900/40 text-yellow-200 border border-yellow-500/30">
                           Assigned
                         </span>
                       ) : (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-900/40 text-green-200 border border-green-500/30">
                           Available
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       {isAssigned(item) ? (
                         <button
                           onClick={() => handleReturn(item._id)}
-                          className="text-orange-600 hover:text-orange-800 font-medium"
+                          className="text-orange-400 hover:text-orange-300 font-medium"
                         >
                           Return
                         </button>
                       ) : (
                         <button
                           onClick={() => handleAssignClick(item)}
-                          className="text-blue-600 hover:text-blue-800 font-medium"
+                          className="text-red-400 hover:text-red-300 font-medium"
                         >
                           Assign
                         </button>
@@ -263,19 +310,6 @@ const InventoryManagement = () => {
             </table>
           )}
         </div>
-      )}
-
-      {/* Create Item Modal */}
-      {showCreateModal && (
-        <CreateItemModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false)
-            fetchInventory()
-            showToast('Item created successfully')
-          }}
-          onError={(msg) => showToast(msg, 'error')}
-        />
       )}
 
       {/* Assign Item Modal */}
@@ -300,7 +334,7 @@ const InventoryManagement = () => {
   )
 }
 
-const CreateItemModal = ({ onClose, onSuccess, onError }) => {
+const CreateItemPanel = ({ onClose, onSuccess, onError }) => {
   const { token } = useAuth()
   const [formData, setFormData] = useState({
     itemName: '',
@@ -348,70 +382,58 @@ const CreateItemModal = ({ onClose, onSuccess, onError }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h3 className="text-xl font-bold text-gray-800">Add Inventory Item</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Item Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="itemName"
-              value={formData.itemName}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter item name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Item Type
-            </label>
-            <select
-              name="itemType"
-              value={formData.itemType}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Jersey">Jersey</option>
-              <option value="Boots">Boots</option>
-              <option value="Training Equipment">Training Equipment</option>
-              <option value="Medical">Medical</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={submitting}
-            >
-              {submitting ? 'Creating...' : 'Create'}
-            </button>
-          </div>
-        </form>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-xl font-bold text-white">Add Inventory Item</h3>
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Item Name <span className="text-red-400">*</span>
+        </label>
+        <input
+          type="text"
+          name="itemName"
+          value={formData.itemName}
+          onChange={handleChange}
+          className="ui-field"
+          placeholder="Enter item name"
+        />
       </div>
-    </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Item Type
+        </label>
+        <select
+          name="itemType"
+          value={formData.itemType}
+          onChange={handleChange}
+          className="ui-select"
+        >
+          <option value="Jersey">Jersey</option>
+          <option value="Boots">Boots</option>
+          <option value="Training Equipment">Training Equipment</option>
+          <option value="Medical">Medical</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div className="flex gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 px-4 py-2 bg-gray-700/40 border border-white/10 text-gray-300 rounded hover:bg-gray-700/60 transition"
+          disabled={submitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition disabled:opacity-50"
+          disabled={submitting}
+        >
+          {submitting ? 'Creating...' : 'Create'}
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -460,11 +482,11 @@ const AssignItemModal = ({ item, players, onClose, onSuccess, onError }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h3 className="text-xl font-bold text-gray-800">Assign Item</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-gray-900/95 backdrop-blur-md rounded-lg shadow-xl max-w-md w-full mx-4 border border-white/10">
+        <div className="flex justify-between items-center p-6 border-b border-white/10">
+          <h3 className="text-xl font-bold text-white">Assign Item</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-300 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -472,24 +494,24 @@ const AssignItemModal = ({ item, players, onClose, onSuccess, onError }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="bg-gray-50 p-3 rounded">
-            <p className="text-sm text-gray-600">Item:</p>
-            <p className="font-medium text-gray-800">{item.itemName}</p>
+          <div className="bg-gray-800/40 p-3 rounded border border-white/10">
+            <p className="text-sm text-gray-400">Item:</p>
+            <p className="font-medium text-white">{item.itemName}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Assign to Player <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Assign to Player <span className="text-red-400">*</span>
             </label>
             <select
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select a player</option>
               {players.map((player) => (
                 <option key={player._id} value={player._id}>
-                  {player.fullName} - {player.position}
+                  {player.fullName} - {getDisplayPosition(player)}
                 </option>
               ))}
             </select>
@@ -499,14 +521,14 @@ const AssignItemModal = ({ item, players, onClose, onSuccess, onError }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
+              className="flex-1 px-4 py-2 bg-gray-700/40 border border-white/10 text-gray-300 rounded hover:bg-gray-700/60 transition"
               disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition disabled:opacity-50"
               disabled={submitting}
             >
               {submitting ? 'Assigning...' : 'Assign'}

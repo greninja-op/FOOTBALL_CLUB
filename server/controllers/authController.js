@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const validator = require('validator');
 const User = require('../models/User');
+const Profile = require('../models/Profile');
 
 /**
  * Authentication Controller
@@ -13,29 +14,39 @@ const User = require('../models/User');
 /**
  * Login function
  * Validates credentials and generates JWT token with 8-hour expiry
+ * Supports login by email OR fullName (case-insensitive)
  * 
- * @param {string} email - User email
+ * @param {string} identifier - User email or fullName
  * @param {string} password - Plain text password
- * @returns {Object} {token, role, userId} on success
+ * @returns {Object} {token, role, userId, fullName} on success
  * @throws {Error} Authentication error without revealing email existence
  * 
  * Validates Requirements: 1.1, 1.2, 1.4
  */
-const login = async (email, password) => {
+const login = async (identifier, password) => {
   try {
     // Validate input
-    if (!email || !password) {
-      throw new Error('Email and password are required');
+    if (!identifier || !password) {
+      throw new Error('Email/name and password are required');
     }
 
-    // Validate email format using RFC 5322 standard (Requirement 20.2)
-    if (!validator.isEmail(email)) {
-      throw new Error('Invalid email format');
+    let user = null;
+    const normalizedIdentifier = identifier.toLowerCase().trim();
+
+    // Try to find by email first
+    if (validator.isEmail(normalizedIdentifier)) {
+      user = await User.findOne({ email: normalizedIdentifier }).select('+passwordHash');
     }
 
-    // Find user by email and explicitly select passwordHash
-    // (it's excluded by default in the schema)
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+    // If not found by email, try to find by fullName (case-insensitive)
+    if (!user) {
+      const profile = await Profile.findOne({
+        fullName: { $regex: new RegExp(`^${normalizedIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      });
+      if (profile) {
+        user = await User.findById(profile.userId).select('+passwordHash');
+      }
+    }
 
     // Generic error message to prevent email enumeration (Requirement 1.2)
     if (!user) {
@@ -50,6 +61,9 @@ const login = async (email, password) => {
       throw new Error('Invalid credentials');
     }
 
+    // Get profile for fullName
+    const profile = await Profile.findOne({ userId: user._id });
+
     // Generate JWT token with 8-hour expiry (Requirement 1.1)
     const token = jwt.sign(
       {
@@ -62,18 +76,20 @@ const login = async (email, password) => {
       }
     );
 
-    // Return token, role, and userId (Requirement 1.1)
+    // Return token, role, userId, and fullName (Requirement 1.1)
     return {
       token,
       role: user.role,
-      userId: user._id.toString()
+      userId: user._id.toString(),
+      fullName: profile?.fullName || null,
+      email: user.email
     };
 
   } catch (error) {
     // Re-throw validation and credential errors as-is
     if (error.message === 'Invalid credentials' ||
         error.message === 'Invalid email format' ||
-        error.message === 'Email and password are required') {
+        error.message === 'Email/name and password are required') {
       throw error;
     }
     // For unexpected errors, throw generic authentication error

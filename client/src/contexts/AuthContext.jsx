@@ -34,17 +34,24 @@ export const AuthProvider = ({ children }) => {
 
         if (response.ok) {
           const data = await response.json()
-          setUser(data.user)
+          // Restore fullName from localStorage if available
+          const storedFullName = localStorage.getItem('userFullName')
+          const storedEmail = localStorage.getItem('userEmail')
+          setUser({ ...data.user, fullName: storedFullName || null, email: storedEmail || null })
           setToken(storedToken)
         } else {
           // Token is invalid, clear it
           localStorage.removeItem('authToken')
+          localStorage.removeItem('userFullName')
+          localStorage.removeItem('userEmail')
           setToken(null)
           setUser(null)
         }
       } catch (error) {
         console.error('Token verification failed:', error)
         localStorage.removeItem('authToken')
+        localStorage.removeItem('userFullName')
+        localStorage.removeItem('userEmail')
         setToken(null)
         setUser(null)
       } finally {
@@ -55,14 +62,14 @@ export const AuthProvider = ({ children }) => {
     verifyToken()
   }, [])
 
-  const login = async (email, password) => {
+  const login = async (identifier, password) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: identifier, password })
       })
 
       if (!response.ok) {
@@ -72,10 +79,12 @@ export const AuthProvider = ({ children }) => {
 
       const data = await response.json()
       
-      // Store token in localStorage
+      // Store token and user info in localStorage
       localStorage.setItem('authToken', data.token)
+      if (data.fullName) localStorage.setItem('userFullName', data.fullName)
+      if (data.email) localStorage.setItem('userEmail', data.email)
       setToken(data.token)
-      setUser({ id: data.userId, role: data.role })
+      setUser({ id: data.userId, role: data.role, fullName: data.fullName || null, email: data.email || null })
 
       return { success: true, role: data.role }
     } catch (error) {
@@ -85,6 +94,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('authToken')
+    localStorage.removeItem('userFullName')
+    localStorage.removeItem('userEmail')
     setToken(null)
     setUser(null)
   }

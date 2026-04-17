@@ -32,6 +32,87 @@ const ProfileSchema = new mongoose.Schema({
     },
     default: 'Staff'
   },
+  preferredPosition: {
+    type: String,
+    enum: {
+      values: [
+        'GK',
+        'CB',
+        'LB',
+        'RB',
+        'LWB',
+        'RWB',
+        'DM',
+        'CM',
+        'AM',
+        'CAM',
+        'LM',
+        'RM',
+        'LW',
+        'RW',
+        'CF',
+        'ST',
+        'SS',
+        'UTILITY',
+        'STAFF'
+      ],
+      message: '{VALUE} is not a valid preferred position'
+    },
+    default: 'STAFF'
+  },
+  secondaryPositions: [{
+    type: String,
+    enum: {
+      values: [
+        'GK',
+        'CB',
+        'LB',
+        'RB',
+        'LWB',
+        'RWB',
+        'DM',
+        'CM',
+        'AM',
+        'CAM',
+        'LM',
+        'RM',
+        'LW',
+        'RW',
+        'CF',
+        'ST',
+        'SS',
+        'UTILITY',
+        'STAFF'
+      ],
+      message: '{VALUE} is not a valid secondary position'
+    }
+  }],
+  playerStatus: {
+    type: String,
+    enum: {
+      values: ['active', 'inactive', 'listed', 'archived', 'transferred', 'retired'],
+      message: '{VALUE} is not a valid player status'
+    },
+    default: 'active'
+  },
+  availabilityNotes: {
+    type: String,
+    default: null,
+    maxlength: [500, 'Availability notes cannot exceed 500 characters']
+  },
+  availabilityOverrideStatus: {
+    type: String,
+    enum: {
+      values: ['auto', 'available', 'unavailable'],
+      message: '{VALUE} is not a valid availability override status'
+    },
+    default: 'auto'
+  },
+  availabilityOverrideReason: {
+    type: String,
+    default: null,
+    maxlength: [250, 'Availability override reason cannot exceed 250 characters']
+  },
   weight: {
     type: Number,
     min: [40, 'Weight must be at least 40 kg'],
@@ -92,6 +173,21 @@ const ProfileSchema = new mongoose.Schema({
       default: 0,
       min: [0, 'Appearances cannot be negative']
     },
+    minutes: {
+      type: Number,
+      default: 0,
+      min: [0, 'Minutes cannot be negative']
+    },
+    yellowCards: {
+      type: Number,
+      default: 0,
+      min: [0, 'Yellow cards cannot be negative']
+    },
+    redCards: {
+      type: Number,
+      default: 0,
+      min: [0, 'Red cards cannot be negative']
+    },
     rating: {
       type: Number,
       default: 0,
@@ -119,7 +215,6 @@ const ProfileSchema = new mongoose.Schema({
 });
 
 // Indexes for performance optimization
-ProfileSchema.index({ userId: 1 }); // Unique index for user-profile relationship
 ProfileSchema.index({ fitnessStatus: 1 }); // Index for fitness status queries
 ProfileSchema.index({ contractEnd: 1 }); // Index for contract expiry tracking
 

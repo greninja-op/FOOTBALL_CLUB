@@ -5,6 +5,41 @@ const fs = require('fs').promises;
 const sharp = require('sharp');
 const { sanitizeText } = require('../utils/sanitize');
 
+const sanitizeOptionalText = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  return sanitizeText(String(value));
+};
+
+const normalizeTrophies = (trophies) => {
+  if (!Array.isArray(trophies)) {
+    return undefined;
+  }
+
+  return trophies
+    .map((entry) => ({
+      title: sanitizeOptionalText(entry?.title || ''),
+      year: sanitizeOptionalText(entry?.year || '')
+    }))
+    .filter((entry) => entry.title && entry.year)
+    .slice(0, 8);
+};
+
+const serializeSettings = (settings) => ({
+  clubName: settings.clubName,
+  logoUrl: settings.logoUrl,
+  homepageHeadline: settings.homepageHeadline,
+  clubDescription: settings.clubDescription,
+  founded: settings.founded,
+  ground: settings.ground,
+  league: settings.league,
+  contactEmail: settings.contactEmail,
+  socialHandle: settings.socialHandle,
+  trophies: settings.trophies || []
+});
+
 /**
  * Settings Controller
  * Handles club settings management with file upload and image optimization
@@ -59,10 +94,7 @@ const getSettings = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      settings: {
-        clubName: settings.clubName,
-        logoUrl: settings.logoUrl
-      }
+      settings: serializeSettings(settings)
     });
   } catch (error) {
     console.error('Get settings error:', error);
@@ -82,7 +114,18 @@ const getSettings = async (req, res) => {
  */
 const updateSettings = async (req, res) => {
   try {
-    const { clubName, logoUrl } = req.body;
+    const {
+      clubName,
+      logoUrl,
+      homepageHeadline,
+      clubDescription,
+      founded,
+      ground,
+      league,
+      contactEmail,
+      socialHandle,
+      trophies
+    } = req.body;
     
     // Get singleton settings document
     const settings = await Settings.getSingleton();
@@ -93,6 +136,32 @@ const updateSettings = async (req, res) => {
     }
     if (logoUrl !== undefined) {
       settings.logoUrl = logoUrl;
+    }
+    if (homepageHeadline !== undefined) {
+      settings.homepageHeadline = sanitizeOptionalText(homepageHeadline);
+    }
+    if (clubDescription !== undefined) {
+      settings.clubDescription = sanitizeOptionalText(clubDescription);
+    }
+    if (founded !== undefined) {
+      settings.founded = founded;
+    }
+    if (ground !== undefined) {
+      settings.ground = sanitizeOptionalText(ground);
+    }
+    if (league !== undefined) {
+      settings.league = sanitizeOptionalText(league);
+    }
+    if (contactEmail !== undefined) {
+      settings.contactEmail = sanitizeOptionalText(contactEmail);
+    }
+    if (socialHandle !== undefined) {
+      settings.socialHandle = sanitizeOptionalText(socialHandle);
+    }
+
+    const normalizedTrophies = normalizeTrophies(trophies);
+    if (normalizedTrophies !== undefined) {
+      settings.trophies = normalizedTrophies;
     }
     
     settings.updatedBy = req.user.id;
@@ -110,10 +179,7 @@ const updateSettings = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Settings updated successfully',
-      settings: {
-        clubName: settings.clubName,
-        logoUrl: settings.logoUrl
-      }
+      settings: serializeSettings(settings)
     });
   } catch (error) {
     console.error('Update settings error:', error);

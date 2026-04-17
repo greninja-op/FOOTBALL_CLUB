@@ -1,94 +1,371 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import FloatingNotice from './FloatingNotice';
+
+const FORMATIONS = {
+  '4-4-2': [
+    { id: 'gk', label: 'GK', accepts: ['GK'], row: 5, col: 3 },
+    { id: 'lb', label: 'LB', accepts: ['LB', 'LWB', 'CB'], row: 4, col: 0 },
+    { id: 'lcb', label: 'LCB', accepts: ['CB', 'LB', 'RB'], row: 4, col: 2 },
+    { id: 'rcb', label: 'RCB', accepts: ['CB', 'LB', 'RB'], row: 4, col: 4 },
+    { id: 'rb', label: 'RB', accepts: ['RB', 'RWB', 'CB'], row: 4, col: 6 },
+    { id: 'lm', label: 'LM', accepts: ['LM', 'LW', 'CM'], row: 3, col: 0 },
+    { id: 'lcm', label: 'LCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 2 },
+    { id: 'rcm', label: 'RCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 4 },
+    { id: 'rm', label: 'RM', accepts: ['RM', 'RW', 'CM'], row: 3, col: 6 },
+    { id: 'ls', label: 'LS', accepts: ['ST', 'CF', 'SS'], row: 1, col: 2 },
+    { id: 'rs', label: 'RS', accepts: ['ST', 'CF', 'SS'], row: 1, col: 4 }
+  ],
+  '4-3-3': [
+    { id: 'gk', label: 'GK', accepts: ['GK'], row: 5, col: 3 },
+    { id: 'lb', label: 'LB', accepts: ['LB', 'LWB', 'CB'], row: 4, col: 0 },
+    { id: 'lcb', label: 'LCB', accepts: ['CB', 'LB', 'RB'], row: 4, col: 2 },
+    { id: 'rcb', label: 'RCB', accepts: ['CB', 'LB', 'RB'], row: 4, col: 4 },
+    { id: 'rb', label: 'RB', accepts: ['RB', 'RWB', 'CB'], row: 4, col: 6 },
+    { id: 'lcm', label: 'LCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 1 },
+    { id: 'dm', label: 'DM', accepts: ['DM', 'CM', 'CB'], row: 3, col: 3 },
+    { id: 'rcm', label: 'RCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 5 },
+    { id: 'lw', label: 'LW', accepts: ['LW', 'LM', 'RW'], row: 1, col: 0 },
+    { id: 'st', label: 'ST', accepts: ['ST', 'CF', 'SS'], row: 1, col: 3 },
+    { id: 'rw', label: 'RW', accepts: ['RW', 'RM', 'LW'], row: 1, col: 6 }
+  ],
+  '3-5-2': [
+    { id: 'gk', label: 'GK', accepts: ['GK'], row: 5, col: 3 },
+    { id: 'lcb', label: 'LCB', accepts: ['CB', 'LB'], row: 4, col: 1 },
+    { id: 'cb', label: 'CB', accepts: ['CB', 'DM'], row: 4, col: 3 },
+    { id: 'rcb', label: 'RCB', accepts: ['CB', 'RB'], row: 4, col: 5 },
+    { id: 'lwb', label: 'LWB', accepts: ['LWB', 'LB', 'LM'], row: 3, col: 0 },
+    { id: 'lcm', label: 'LCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 2 },
+    { id: 'cam', label: 'CAM', accepts: ['CAM', 'AM', 'CM'], row: 2, col: 3 },
+    { id: 'rcm', label: 'RCM', accepts: ['CM', 'DM', 'AM'], row: 3, col: 4 },
+    { id: 'rwb', label: 'RWB', accepts: ['RWB', 'RB', 'RM'], row: 3, col: 6 },
+    { id: 'ls', label: 'LS', accepts: ['ST', 'CF', 'SS'], row: 1, col: 2 },
+    { id: 'rs', label: 'RS', accepts: ['ST', 'CF', 'SS'], row: 1, col: 4 }
+  ]
+};
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const TacticalBoard = () => {
   const { token } = useAuth();
   const [players, setPlayers] = useState([]);
+  const [unavailablePlayers, setUnavailablePlayers] = useState([]);
   const [fixtures, setFixtures] = useState([]);
   const [selectedFixture, setSelectedFixture] = useState('');
-  const [formation, setFormation] = useState('4-4-2');
-  const [lineup, setLineup] = useState([]);
+  const [formation, setFormation] = useState('4-3-3');
+  const [bench, setBench] = useState([]);
+  const [lineupMap, setLineupMap] = useState({});
+  const [dragPayload, setDragPayload] = useState(null);
+  const [fixtureHistory, setFixtureHistory] = useState([]);
+  const [overrideDrafts, setOverrideDrafts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const formations = {
-    '4-4-2': { defenders: 4, midfielders: 4, forwards: 2 },
-    '4-3-3': { defenders: 4, midfielders: 3, forwards: 3 },
-    '3-5-2': { defenders: 3, midfielders: 5, forwards: 2 }
-  };
+  const slots = useMemo(() => FORMATIONS[formation], [formation]);
 
   useEffect(() => {
     fetchPlayers();
     fetchFixtures();
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    setLineupMap({});
+    setBench([]);
+  }, [formation]);
 
   const fetchPlayers = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/profiles`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch(`${API_URL}/api/player-domain/availability`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
       if (data.success) {
-        // Filter out Red fitness status players
-        const availablePlayers = data.profiles.filter(p => p.fitnessStatus !== 'Red');
-        setPlayers(availablePlayers);
+        setPlayers(data.available || []);
+        setUnavailablePlayers(data.unavailable || []);
       }
       setLoading(false);
-    } catch (err) {
+    } catch (fetchError) {
       setError('Failed to load players');
       setLoading(false);
     }
   };
 
+  const updateOverrideDraft = (playerId, value) => {
+    setOverrideDrafts((current) => ({
+      ...current,
+      [playerId]: value
+    }));
+  };
+
+  const submitAvailabilityOverride = async (playerId, status) => {
+    try {
+      const response = await fetch(`${API_URL}/api/player-domain/availability/${playerId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status,
+          reason: overrideDrafts[playerId] || ''
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to update availability');
+      }
+
+      setSuccess('Availability updated');
+      fetchPlayers();
+      setTimeout(() => setSuccess(''), 2500);
+    } catch (overrideError) {
+      setError(overrideError.message || 'Failed to update availability');
+    }
+  };
+
   const fetchFixtures = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/fixtures`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch(`${API_URL}/api/fixtures`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
       if (data.success) {
-        // Only show future fixtures without lineups
-        const upcomingFixtures = data.fixtures.filter(f => 
-          new Date(f.date) > new Date() && (!f.lineup || f.lineup.length === 0)
+        const upcomingFixtures = data.fixtures.filter((fixture) =>
+          new Date(fixture.date) > new Date() && (!fixture.lineup || fixture.lineup.length === 0)
         );
         setFixtures(upcomingFixtures);
       }
-    } catch (err) {
+    } catch (fetchError) {
       setError('Failed to load fixtures');
     }
   };
 
-  const handleDragStart = (e, player) => {
-    e.dataTransfer.setData('player', JSON.stringify(player));
+  const fetchFixtureHistory = async (fixtureId) => {
+    if (!fixtureId) {
+      setFixtureHistory([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/fixtures/${fixtureId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFixtureHistory(data.fixture.lineupHistory || []);
+      }
+    } catch (fetchError) {
+      setError('Failed to load fixture history');
+    }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const player = JSON.parse(e.dataTransfer.getData('player'));
-    
-    // Check if player already in lineup
-    if (lineup.find(p => p._id === player._id)) {
-      setError('Player already in lineup');
+  const allSelectedIds = useMemo(() => {
+    const assigned = Object.values(lineupMap)
+      .filter(Boolean)
+      .map((player) => player.id || player._id);
+
+    return new Set([...assigned, ...bench.map((player) => player.id || player._id)]);
+  }, [lineupMap, bench]);
+
+  const availableBenchPool = players.filter((player) => !allSelectedIds.has(player.id || player._id));
+
+  useEffect(() => {
+    fetchFixtureHistory(selectedFixture);
+  }, [selectedFixture, token]);
+
+  const handleDragStart = (payload) => {
+    setDragPayload(payload);
+  };
+
+  const assignPlayerToSlot = (slotId, player) => {
+    setLineupMap((current) => {
+      const next = { ...current };
+      const existingSlotId = Object.entries(next).find(([, currentPlayer]) => {
+        if (!currentPlayer) return false;
+        return (currentPlayer.id || currentPlayer._id) === (player.id || player._id);
+      })?.[0];
+
+      if (existingSlotId) {
+        delete next[existingSlotId];
+      }
+
+      next[slotId] = player;
+      return next;
+    });
+  };
+
+  const swapSlots = (sourceSlotId, targetSlotId) => {
+    setLineupMap((current) => {
+      const next = { ...current };
+      const sourcePlayer = next[sourceSlotId] || null;
+      const targetPlayer = next[targetSlotId] || null;
+      next[targetSlotId] = sourcePlayer;
+      next[sourceSlotId] = targetPlayer;
+      return next;
+    });
+  };
+
+  const dropOnSlot = (slot) => {
+    if (!dragPayload) return;
+
+    if (dragPayload.type === 'slot') {
+      swapSlots(dragPayload.slotId, slot.id);
+      setDragPayload(null);
       return;
     }
 
-    // Check lineup size (max 18: 11 starters + 7 subs)
-    if (lineup.length >= 18) {
-      setError('Lineup is full (maximum 18 players: 11 starters + 7 substitutes)');
-      return;
-    }
+    const player = dragPayload.player;
+    const playerId = player.id || player._id;
+    const slotOccupant = lineupMap[slot.id];
 
-    setLineup([...lineup, player]);
+    setBench((currentBench) => {
+      const filteredBench = currentBench.filter((entry) => (entry.id || entry._id) !== playerId);
+      if (slotOccupant && (dragPayload.type === 'bench' || dragPayload.type === 'pool')) {
+        if (filteredBench.some((entry) => (entry.id || entry._id) === (slotOccupant.id || slotOccupant._id))) {
+          return filteredBench;
+        }
+        return [...filteredBench, slotOccupant];
+      }
+      return filteredBench;
+    });
+
+    assignPlayerToSlot(slot.id, player);
+    setDragPayload(null);
     setError('');
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
+  const dropOnBench = () => {
+    if (!dragPayload) return;
+
+    if (dragPayload.type === 'slot') {
+      const slotPlayer = lineupMap[dragPayload.slotId];
+      if (!slotPlayer) return;
+
+      setLineupMap((current) => ({
+        ...current,
+        [dragPayload.slotId]: null
+      }));
+
+      setBench((currentBench) => {
+        if (currentBench.some((entry) => (entry.id || entry._id) === (slotPlayer.id || slotPlayer._id))) {
+          return currentBench;
+        }
+        return [...currentBench, slotPlayer].slice(0, 7);
+      });
+    } else if (dragPayload.type === 'pool') {
+      const player = dragPayload.player;
+      setBench((currentBench) => {
+        if (currentBench.length >= 7) {
+          setError('Bench already has 7 players');
+          return currentBench;
+        }
+        if (currentBench.some((entry) => (entry.id || entry._id) === (player.id || player._id))) {
+          return currentBench;
+        }
+        return [...currentBench, player];
+      });
+    }
+
+    setDragPayload(null);
   };
 
-  const removeFromLineup = (playerId) => {
-    setLineup(lineup.filter(p => p._id !== playerId));
+  const dropBackToPool = () => {
+    if (!dragPayload) return;
+
+    if (dragPayload.type === 'slot') {
+      setLineupMap((current) => ({
+        ...current,
+        [dragPayload.slotId]: null
+      }));
+    }
+
+    if (dragPayload.type === 'bench') {
+      setBench((current) => current.filter((player) => (player.id || player._id) !== (dragPayload.player.id || dragPayload.player._id)));
+    }
+
+    setDragPayload(null);
+  };
+
+  const autoFillLineup = () => {
+    const sortedPlayers = [...players].sort((a, b) => {
+      const scoreA = (a.stats?.goals || 0) + (a.stats?.assists || 0) + (a.stats?.rating || 0);
+      const scoreB = (b.stats?.goals || 0) + (b.stats?.assists || 0) + (b.stats?.rating || 0);
+      return scoreB - scoreA;
+    });
+
+    const nextMap = {};
+    const usedIds = new Set();
+
+    slots.forEach((slot) => {
+      const match = sortedPlayers.find((player) => {
+        const playerId = player.id || player._id;
+        if (usedIds.has(playerId)) return false;
+        const tags = [player.preferredPosition, ...(player.secondaryPositions || []), player.position].filter(Boolean);
+        return tags.some((tag) => slot.accepts.includes(tag));
+      }) || sortedPlayers.find((player) => !usedIds.has(player.id || player._id));
+
+      if (match) {
+        nextMap[slot.id] = match;
+        usedIds.add(match.id || match._id);
+      }
+    });
+
+    const nextBench = sortedPlayers.filter((player) => !usedIds.has(player.id || player._id)).slice(0, 7);
+    setLineupMap(nextMap);
+    setBench(nextBench);
+    setError('');
+  };
+
+  const loadHistoryVersion = (historyEntry) => {
+    const historyFormation = historyEntry.formation;
+    if (historyFormation && FORMATIONS[historyFormation]) {
+      setFormation(historyFormation);
+
+      setTimeout(() => {
+        hydrateLineupFromHistory(historyEntry, historyFormation);
+      }, 0);
+      return;
+    }
+
+    hydrateLineupFromHistory(historyEntry, formation);
+  };
+
+  const hydrateLineupFromHistory = (historyEntry, activeFormation) => {
+    const activeSlots = FORMATIONS[activeFormation];
+    const nextMap = {};
+    const historyPlayers = historyEntry.lineup || [];
+
+    activeSlots.forEach((slot, index) => {
+      if (historyPlayers[index]) {
+        nextMap[slot.id] = historyPlayers[index];
+      }
+    });
+
+    setLineupMap(nextMap);
+    setBench(historyPlayers.slice(activeSlots.length, activeSlots.length + 7));
+    setSuccess(`Loaded lineup version ${historyEntry.version}`);
+    setTimeout(() => setSuccess(''), 2500);
+  };
+
+  const removeFromSlot = (slotId) => {
+    const player = lineupMap[slotId];
+    if (!player) return;
+
+    setLineupMap((current) => ({
+      ...current,
+      [slotId]: null
+    }));
+
+    setBench((currentBench) => {
+      if (currentBench.length >= 7) return currentBench;
+      return [...currentBench, player];
+    });
+  };
+
+  const removeFromBench = (playerId) => {
+    setBench((current) => current.filter((player) => (player.id || player._id) !== playerId));
   };
 
   const saveLineup = async () => {
@@ -97,166 +374,189 @@ const TacticalBoard = () => {
       return;
     }
 
-    if (lineup.length === 0) {
-      setError('Please add at least one player to the lineup');
-      return;
-    }
+    const starters = slots.map((slot) => lineupMap[slot.id]).filter(Boolean);
+    const finalLineup = [...starters, ...bench];
 
-    if (lineup.length > 18) {
-      setError('Lineup cannot exceed 18 players');
+    if (starters.length < 11) {
+      setError('Please fill all 11 starter slots before saving');
       return;
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/fixtures/${selectedFixture}`, {
+      const response = await fetch(`${API_URL}/api/fixtures/${selectedFixture}/lineup`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          lineup: lineup.map(p => p._id)
+          lineup: finalLineup.map((player) => player.id || player._id),
+          formation
         })
       });
 
       const data = await response.json();
-      
       if (data.success) {
         setSuccess('Lineup saved successfully');
-        setLineup([]);
+        setLineupMap({});
+        setBench([]);
         setSelectedFixture('');
-        fetchFixtures(); // Refresh fixtures list
+        fetchFixtures();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         setError(data.message || 'Failed to save lineup');
       }
-    } catch (err) {
+    } catch (saveError) {
       setError('Failed to save lineup');
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">
-      <div className="text-gray-600">Loading players...</div>
-    </div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-gray-400">Loading tactical board...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Tactical Board</h2>
+    <div className="p-4">
+      <FloatingNotice message={error || success} type={error ? 'error' : 'success'} />
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {success}
-        </div>
-      )}
-
-      {/* Fixture Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Fixture
-        </label>
-        <select
-          value={selectedFixture}
-          onChange={(e) => setSelectedFixture(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
-        >
-          <option value="">-- Select a fixture --</option>
-          {fixtures.map(fixture => (
-            <option key={fixture.id} value={fixture.id}>
-              {new Date(fixture.date).toLocaleDateString()} - vs {fixture.opponent} ({fixture.location})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Formation Selection */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Formation
-        </label>
-        <div className="flex gap-2">
-          {Object.keys(formations).map(f => (
-            <button
-              key={f}
-              onClick={() => setFormation(f)}
-              className={`px-4 py-2 rounded ${
-                formation === f
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        {/* Available Players */}
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold mb-3">Available Players</h3>
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-96">
-            {players.map(player => (
-              <div
-                key={player._id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, player)}
-                className="bg-white p-3 mb-2 rounded shadow cursor-move hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{player.fullName}</div>
-                    <div className="text-sm text-gray-600">{player.position}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      player.fitnessStatus === 'Green' ? 'bg-green-100 text-green-800' :
-                      player.fitnessStatus === 'Yellow' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {player.fitnessStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <h2 className="text-xl font-bold text-white">Tactical Board</h2>
+          <p className="mt-1 text-xs text-gray-400">
+            Build a slot-based lineup, swap players between positions, and keep the bench organized.
+          </p>
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/60"
+        >
+          Print Pitch
+        </button>
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-300">Select Fixture</label>
+          <select
+            value={selectedFixture}
+            onChange={(event) => setSelectedFixture(event.target.value)}
+            className="ui-select"
+          >
+            <option value="">-- Select a fixture --</option>
+            {fixtures.map((fixture) => (
+              <option key={fixture.id} value={fixture.id}>
+                {new Date(fixture.date).toLocaleDateString()} - vs {fixture.opponent} ({fixture.location})
+              </option>
             ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-300">Formation</label>
+          <div className="flex flex-wrap gap-2">
+            {Object.keys(FORMATIONS).map((shape) => (
+              <button
+                key={shape}
+                onClick={() => setFormation(shape)}
+                className={`rounded px-3 py-1.5 text-sm ${
+                  formation === shape ? 'bg-red-600 text-white' : 'bg-gray-700/40 border border-white/10 text-white hover:bg-gray-700/60'
+                }`}
+              >
+                {shape}
+              </button>
+            ))}
+            <button
+              onClick={autoFillLineup}
+              className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
+            >
+              Auto Fill
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Lineup Builder */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3">
-            Lineup ({lineup.length}/18)
-          </h3>
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            className="bg-green-50 p-4 rounded-lg border-2 border-dashed border-green-300 min-h-96"
-          >
-            {lineup.length === 0 ? (
-              <div className="text-center text-gray-500 mt-20">
-                Drag players here to build lineup
-              </div>
-            ) : (
-              lineup.map(player => (
-                <div
-                  key={player._id}
-                  className="bg-white p-3 mb-2 rounded shadow flex justify-between items-center"
-                >
-                  <div>
-                    <div className="font-medium">{player.fullName}</div>
-                    <div className="text-sm text-gray-600">{player.position}</div>
-                  </div>
+      {selectedFixture && (
+        <div className="mb-4 rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-white">Saved Lineup Versions</h3>
+            <span className="text-sm text-gray-400">{fixtureHistory.length} versions</span>
+          </div>
+          {fixtureHistory.length === 0 ? (
+            <div className="text-sm text-gray-500">No saved lineup history for this fixture yet.</div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {fixtureHistory
+                .slice()
+                .sort((a, b) => b.version - a.version)
+                .map((entry) => (
                   <button
-                    onClick={() => removeFromLineup(player._id)}
-                    className="text-red-600 hover:text-red-800 font-semibold"
+                    key={`${entry.version}-${entry.savedAt}`}
+                    onClick={() => loadHistoryVersion(entry)}
+                    className="rounded-lg bg-gray-700/20 border border-white/10 p-3 text-left transition hover:border-red-500/30 hover:bg-gray-700/40"
+                  >
+                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
+                      Version {entry.version}
+                    </div>
+                    <div className="mt-2 text-sm text-gray-300">
+                      {entry.formation || 'No formation'} - {entry.lineup.length} players
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {new Date(entry.savedAt).toLocaleString()}
+                    </div>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.2fr_0.9fr]">
+        <aside>
+          <h3 className="mb-3 text-lg font-semibold text-white">Available Players</h3>
+          <div className="min-h-96 rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
+            <div
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={dropBackToPool}
+              className="min-h-80 rounded-2xl border border-dashed border-white/10 p-2"
+            >
+              {availableBenchPool.map((player) => (
+                <PlayerToken
+                  key={player.id || player._id}
+                  player={player}
+                  onDragStart={() => handleDragStart({ type: 'pool', player })}
+                />
+              ))}
+              {dragPayload && dragPayload.type !== 'pool' && (
+                <p className="mt-3 text-center text-xs uppercase tracking-[0.25em] text-gray-500">
+                  Drop here to remove from lineup
+                </p>
+              )}
+            </div>
+          </div>
+
+          <h3 className="mb-3 mt-6 text-lg font-semibold text-white">Bench ({bench.length}/7)</h3>
+          <div
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={dropOnBench}
+            className="min-h-44 rounded-lg border border-dashed border-green-500/30 bg-green-900/20 p-4"
+          >
+            {bench.length === 0 ? (
+              <p className="mt-8 text-center text-sm text-gray-500">Drag players here for the bench</p>
+            ) : (
+              bench.map((player) => (
+                <div key={player.id || player._id} className="mb-2 flex items-center gap-2">
+                  <PlayerToken
+                    player={player}
+                    compact
+                    onDragStart={() => handleDragStart({ type: 'bench', player })}
+                  />
+                  <button
+                    onClick={() => removeFromBench(player.id || player._id)}
+                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
                   >
                     Remove
                   </button>
@@ -264,18 +564,168 @@ const TacticalBoard = () => {
               ))
             )}
           </div>
+        </aside>
+
+        <section>
+          <h3 className="mb-3 text-lg font-semibold text-white">Pitch Layout</h3>
+          <div className="rounded-[28px] border border-emerald-700/40 bg-[linear-gradient(180deg,#0b5d37_0%,#0b7142_100%)] p-4 shadow-inner">
+            <div className="grid grid-cols-7 gap-3 rounded-[24px] border border-white/20 p-4">
+              {Array.from({ length: 42 }).map((_, index) => {
+                const row = Math.floor(index / 7);
+                const col = index % 7;
+                const slot = slots.find((entry) => entry.row === row && entry.col === col);
+
+                if (!slot) {
+                  return <div key={`cell-${index}`} className="h-20 rounded-2xl border border-transparent" />;
+                }
+
+                const assignedPlayer = lineupMap[slot.id];
+                const mismatch = assignedPlayer && !playerFitsSlot(assignedPlayer, slot);
+
+                return (
+                  <div
+                    key={slot.id}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => dropOnSlot(slot)}
+                    className={`relative flex h-20 flex-col items-center justify-center rounded-2xl border p-2 text-center ${
+                      mismatch
+                        ? 'border-amber-300 bg-amber-50/90'
+                        : 'border-white/30 bg-white/10'
+                    }`}
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/70">{slot.label}</div>
+                    {assignedPlayer ? (
+                      <>
+                        <div
+                          draggable
+                          onDragStart={() => handleDragStart({ type: 'slot', slotId: slot.id })}
+                          className="mt-1 cursor-move rounded-full bg-slate-950/70 px-3 py-1 text-xs font-semibold text-white"
+                        >
+                          {assignedPlayer.fullName}
+                        </div>
+                        {mismatch && (
+                          <div className="mt-1 text-[10px] font-semibold uppercase text-amber-900">
+                            Out of Position
+                          </div>
+                        )}
+                        <button
+                          onClick={() => removeFromSlot(slot.id)}
+                          className="absolute right-1 top-1 text-[10px] font-bold text-white/80"
+                        >
+                          X
+                        </button>
+                      </>
+                    ) : (
+                      <div className="mt-1 text-[11px] text-white/60">Drop player</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           <button
             onClick={saveLineup}
-            disabled={!selectedFixture || lineup.length === 0}
-            className="w-full mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={!selectedFixture}
+            className="mt-4 w-full rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-700/40"
           >
             Save Lineup
           </button>
-        </div>
+        </section>
+
+        <aside>
+          <h3 className="mb-3 text-lg font-semibold text-white">Unavailable Players</h3>
+          <div className="min-h-96 rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
+            {unavailablePlayers.length === 0 ? (
+              <div className="mt-20 text-center text-sm text-gray-500">All players available</div>
+            ) : (
+              unavailablePlayers.map((player) => (
+                <div key={player.id} className="mb-3 rounded-lg bg-gray-700/20 border border-white/10 p-3">
+                  <div className="font-medium text-white">{player.fullName}</div>
+                  <div className="text-sm text-gray-400">{player.preferredPosition || player.position}</div>
+                  <div className="mt-2 inline-flex rounded-full bg-red-900/40 border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-200">
+                    {player.reason?.label}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">{player.reason?.detail}</div>
+                  <input
+                    value={overrideDrafts[player.id] || ''}
+                    onChange={(event) => updateOverrideDraft(player.id, event.target.value)}
+                    className="mt-3 w-full rounded bg-gray-800/40 border border-white/20 text-white px-2 py-1 text-xs placeholder-gray-500"
+                    placeholder="Manual note for override"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => submitAvailabilityOverride(player.id, 'available')}
+                      className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
+                    >
+                      Force Available
+                    </button>
+                    <button
+                      onClick={() => submitAvailabilityOverride(player.id, 'auto')}
+                      className="rounded bg-gray-700/40 border border-white/10 px-2 py-1 text-xs font-semibold text-white hover:bg-gray-700/60"
+                    >
+                      Back to Auto
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <h3 className="mb-3 mt-6 text-lg font-semibold text-white">Manual Availability Controls</h3>
+          <div className="rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
+            <div className="space-y-3">
+              {players.slice(0, 6).map((player) => (
+                <div key={`manual-${player.id}`} className="rounded-lg bg-gray-700/20 border border-white/10 p-3">
+                  <div className="font-medium text-white">{player.fullName}</div>
+                  <div className="text-sm text-gray-400">{player.preferredPosition || player.position}</div>
+                  <input
+                    value={overrideDrafts[player.id] || ''}
+                    onChange={(event) => updateOverrideDraft(player.id, event.target.value)}
+                    className="mt-2 w-full rounded bg-gray-800/40 border border-white/20 text-white px-2 py-1 text-xs placeholder-gray-500"
+                    placeholder="Manual note"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => submitAvailabilityOverride(player.id, 'unavailable')}
+                      className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                    >
+                      Mark Unavailable
+                    </button>
+                    <button
+                      onClick={() => submitAvailabilityOverride(player.id, 'auto')}
+                      className="rounded bg-gray-700/40 border border-white/10 px-2 py-1 text-xs font-semibold text-white hover:bg-gray-700/60"
+                    >
+                      Auto
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
 };
+
+const PlayerToken = ({ player, onDragStart, compact = false }) => (
+  <div
+    draggable
+    onDragStart={onDragStart}
+    className={`cursor-move rounded-lg bg-gray-700/40 border border-white/10 shadow transition hover:shadow-md hover:bg-gray-700/60 ${compact ? 'flex-1 p-2' : 'mb-2 p-3'}`}
+  >
+    <div className="font-medium text-white">{player.fullName}</div>
+    <div className="text-sm text-gray-400">{player.preferredPosition || player.position}</div>
+    <div className="mt-1 inline-flex rounded-full bg-gray-800/60 border border-white/20 px-2 py-1 text-[11px] font-semibold text-gray-300">
+      Rating {Number(player.stats?.rating || 0).toFixed(1)}
+    </div>
+  </div>
+);
+
+function playerFitsSlot(player, slot) {
+  const tags = [player.preferredPosition, ...(player.secondaryPositions || []), player.position].filter(Boolean);
+  return tags.some((tag) => slot.accepts.includes(tag));
+}
 
 export default TacticalBoard;

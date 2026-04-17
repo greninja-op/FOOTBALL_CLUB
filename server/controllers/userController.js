@@ -128,11 +128,11 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Update user
+// Update user (now supports fullName and password change)
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, role } = req.body;
+    const { email, role, fullName, password } = req.body;
 
     // Find user
     const user = await User.findById(id);
@@ -164,7 +164,26 @@ exports.updateUser = async (req, res) => {
       user.role = role;
     }
 
+    // Update password if provided
+    if (password && password.length >= 6) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      user.passwordHash = passwordHash;
+    }
+
     await user.save();
+
+    // Update profile fullName if provided
+    if (fullName !== undefined) {
+      const sanitizedFullName = sanitizeText(fullName);
+      await Profile.findOneAndUpdate(
+        { userId: id },
+        { fullName: sanitizedFullName },
+        { upsert: false }
+      );
+    }
+
+    // Get updated profile
+    const profile = await Profile.findOne({ userId: id });
 
     res.status(200).json({
       message: 'User updated successfully',
@@ -172,7 +191,11 @@ exports.updateUser = async (req, res) => {
         id: user._id,
         email: user.email,
         role: user.role,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        profile: profile ? {
+          fullName: profile.fullName,
+          position: profile.position
+        } : null
       }
     });
   } catch (error) {

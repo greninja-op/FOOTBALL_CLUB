@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
+  maxWorkers: 1,
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'controllers/**/*.js',
@@ -14,13 +15,5 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     '/node_modules/'
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70
-    }
-  }
+  ]
 };

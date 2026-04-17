@@ -11,8 +11,8 @@ const SystemLogSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Action is required'],
     enum: {
-      values: ['CREATE', 'UPDATE', 'DELETE'],
-      message: '{VALUE} is not a valid action. Must be one of: CREATE, UPDATE, DELETE'
+      values: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN'],
+      message: '{VALUE} is not a valid action.'
     }
   },
   performedBy: {

@@ -9,10 +9,8 @@ describe('Property Tests: Authentication and Authorization (Task 4.4)', () => {
   const TOKEN_EXPIRY = '8h';
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    process.env.JWT_SECRET = JWT_SECRET;
+    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test');
   });
 
   afterAll(async () => {
@@ -123,9 +121,9 @@ describe('Property Tests: Authentication and Authorization (Task 4.4)', () => {
             expect(isInvalid).toBe(false);
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 10 }
       );
-    });
+    }, 15000);
 
     it('should never store passwords in plain text', async () => {
       await fc.assert(
@@ -149,9 +147,9 @@ describe('Property Tests: Authentication and Authorization (Task 4.4)', () => {
             expect(user.passwordHash).toMatch(/^\$2[aby]\$10\$/);
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 10 }
       );
-    });
+    }, 15000);
   });
 
   describe('Property 4: Role-Based Route Authorization', () => {

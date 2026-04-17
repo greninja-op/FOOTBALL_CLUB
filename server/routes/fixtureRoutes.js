@@ -78,17 +78,19 @@ router.post('/', authMiddleware, requireRole(['manager', 'admin']), loggerMiddle
  * Validates Requirements: 6.1
  */
 router.get('/', authMiddleware, fixtureController.getAllFixtures);
+router.get('/:id', authMiddleware, fixtureController.getFixtureById);
 
 /**
  * PUT /api/fixtures/:id
  * Update fixture details
  * 
- * @access Manager, Coach, Admin
+ * @access Manager, Admin
  * @middleware authMiddleware - Validates JWT token
- * @middleware requireRole(['manager', 'coach', 'admin']) - Restricts access
+ * @middleware requireRole(['manager', 'admin']) - Restricts access
  * @middleware loggerMiddleware - Logs the operation to SystemLog
  * 
- * Note: Only coach can update lineup field (validated in controller)
+ * Note:
+ * - Managers/admins can update fixture metadata only
  * 
  * Request body:
  * {
@@ -96,7 +98,6 @@ router.get('/', authMiddleware, fixtureController.getAllFixtures);
  *   date: Date (optional),
  *   location: string (optional),
  *   matchType: string (optional),
- *   lineup: ObjectId[] (optional, max 18, coach only)
  * }
  * 
  * Response:
@@ -109,12 +110,20 @@ router.get('/', authMiddleware, fixtureController.getAllFixtures);
  * Status codes:
  * - 200: Fixture updated successfully
  * - 400: Validation error (past date, lineup > 18)
- * - 403: Access denied (not manager, coach, or admin)
+ * - 403: Access denied (not manager or admin)
  * - 404: Fixture not found
  * 
  * Validates Requirements: 6.5, 6.6, 2.7
  */
-router.put('/:id', authMiddleware, requireRole(['manager', 'coach', 'admin']), loggerMiddleware, fixtureController.updateFixture);
+router.put('/:id', authMiddleware, requireRole(['manager', 'admin']), loggerMiddleware, fixtureController.updateFixture);
+
+/**
+ * PUT /api/fixtures/:id/lineup
+ * Update fixture lineup
+ *
+ * @access Coach, Admin
+ */
+router.put('/:id/lineup', authMiddleware, requireRole(['coach', 'admin']), loggerMiddleware, fixtureController.updateFixtureLineup);
 
 /**
  * DELETE /api/fixtures/:id

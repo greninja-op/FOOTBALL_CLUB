@@ -80,10 +80,20 @@ const submitRequest = async (req, res) => {
     });
   } catch (error) {
     console.error('Submit leave request error:', error);
+
+    // Extract readable Mongoose validation error message
+    let message = 'Failed to submit leave request';
+    if (error.name === 'ValidationError') {
+      // Get the first validation error message (e.g. "Reason must be at least 10 characters")
+      const firstError = Object.values(error.errors)[0];
+      message = firstError ? firstError.message : message;
+    } else if (error.message) {
+      message = error.message;
+    }
+
     res.status(400).json({
       success: false,
-      message: 'Failed to submit leave request',
-      error: error.message
+      message
     });
   }
 };
@@ -277,6 +287,13 @@ const getPlayerRequests = async (req, res) => {
       });
     }
 
+    if (req.user.role === 'player' && String(player.userId) !== String(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Players can only view their own leave history.'
+      });
+    }
+
     // Get all leave requests for this player
     const requests = await LeaveRequest.find({ playerId })
       .populate('reviewedBy', 'email role')
@@ -343,10 +360,52 @@ const getPendingRequests = async (req, res) => {
   }
 };
 
+/**
+ * Get all approved leave requests
+ * GET /api/leave/approved
+ *
+ * @access Coach, Admin
+ */
+const getApprovedRequests = async (req, res) => {
+  try {
+    const today = new Date();
+    const approvedRequests = await LeaveRequest.find({
+      status: 'Approved',
+      endDate: { $gte: today }
+    })
+      .populate('playerId', 'fullName position')
+      .sort({ startDate: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: approvedRequests.length,
+      requests: approvedRequests.map((req) => ({
+        id: req._id,
+        playerId: req.playerId,
+        startDate: req.startDate,
+        endDate: req.endDate,
+        reason: req.reason,
+        status: req.status,
+        dateRequested: req.dateRequested,
+        reviewedBy: req.reviewedBy,
+        reviewedAt: req.reviewedAt
+      }))
+    });
+  } catch (error) {
+    console.error('Get approved requests error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch approved requests',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   submitRequest,
   approveRequest,
   denyRequest,
   getPlayerRequests,
-  getPendingRequests
+  getPendingRequests,
+  getApprovedRequests
 };

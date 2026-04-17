@@ -180,16 +180,78 @@ const getAllFixtures = async (req, res) => {
 };
 
 /**
+ * Get fixture by ID with lineup history
+ * GET /api/fixtures/:id
+ *
+ * @access All authenticated users
+ */
+const getFixtureById = async (req, res) => {
+  try {
+    const fixture = await Fixture.findById(req.params.id)
+      .populate('createdBy', 'email role')
+      .populate('lineup', 'fullName position preferredPosition fitnessStatus')
+      .populate('lineupHistory.savedBy', 'email role')
+      .populate('lineupHistory.lineup', 'fullName position preferredPosition fitnessStatus');
+
+    if (!fixture) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fixture not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      fixture: {
+        id: fixture._id,
+        opponent: fixture.opponent,
+        date: fixture.date,
+        location: fixture.location,
+        matchType: fixture.matchType,
+        lineup: fixture.lineup,
+        lineupHistory: fixture.lineupHistory.map((entry) => ({
+          version: entry.version,
+          savedAt: entry.savedAt,
+          formation: entry.formation,
+          savedBy: entry.savedBy ? {
+            id: entry.savedBy._id,
+            email: entry.savedBy.email,
+            role: entry.savedBy.role
+          } : null,
+          lineup: entry.lineup
+        })),
+        createdBy: fixture.createdBy,
+        createdAt: fixture.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Get fixture by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch fixture',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Update fixture details
  * PUT /api/fixtures/:id
  * 
- * @access Manager, Coach, Admin
- * Note: Only coach can update lineup field
+ * @access Manager, Admin
+ * Note: Metadata-only update path
  */
 const updateFixture = async (req, res) => {
   try {
     const { id } = req.params;
     const { opponent, date, location, matchType, lineup } = req.body;
+
+    if (lineup !== undefined) {
+      return res.status(403).json({
+        success: false,
+        message: 'Use the dedicated lineup endpoint to update fixture lineups'
+      });
+    }
 
     // Find fixture
     const fixture = await Fixture.findById(id);
@@ -236,19 +298,6 @@ const updateFixture = async (req, res) => {
       fixture.matchType = matchType;
     }
 
-    if (lineup !== undefined) {
-      // Validate lineup size (max 18 players)
-      if (lineup.length > 18) {
-        return res.status(400).json({
-          success: false,
-          message: 'Lineup cannot exceed 18 players (11 starters + 7 substitutes)'
-        });
-      }
-      
-      changes.lineup = { from: fixture.lineup.length, to: lineup.length };
-      fixture.lineup = lineup;
-    }
-
     await fixture.save();
 
     // Log the operation
@@ -270,6 +319,7 @@ const updateFixture = async (req, res) => {
         location: fixture.location,
         matchType: fixture.matchType,
         lineup: fixture.lineup,
+        lineupHistory: fixture.lineupHistory,
         createdBy: fixture.createdBy,
         createdAt: fixture.createdAt
       }
@@ -279,6 +329,87 @@ const updateFixture = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Failed to update fixture',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update fixture lineup
+ * PUT /api/fixtures/:id/lineup
+ *
+ * @access Coach, Admin
+ */
+const updateFixtureLineup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lineup, formation } = req.body;
+
+    if (!Array.isArray(lineup)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lineup must be provided as an array'
+      });
+    }
+
+    if (lineup.length > 18) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lineup cannot exceed 18 players (11 starters + 7 substitutes)'
+      });
+    }
+
+    const fixture = await Fixture.findById(id);
+    if (!fixture) {
+      return res.status(404).json({
+        success: false,
+        message: 'Fixture not found'
+      });
+    }
+
+    const previousLineupLength = fixture.lineup.length;
+    fixture.lineup = lineup;
+    fixture.lineupHistory.push({
+      version: fixture.lineupHistory.length + 1,
+      savedAt: new Date(),
+      savedBy: req.user.id,
+      formation: formation || null,
+      lineup
+    });
+
+    await fixture.save();
+
+    await SystemLog.create({
+      action: 'UPDATE',
+      performedBy: req.user.id,
+      targetCollection: 'Fixture',
+      targetId: fixture._id,
+      changes: {
+        lineup: { from: previousLineupLength, to: lineup.length },
+        formation: formation || null
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Fixture lineup updated successfully',
+      fixture: {
+        id: fixture._id,
+        opponent: fixture.opponent,
+        date: fixture.date,
+        location: fixture.location,
+        matchType: fixture.matchType,
+        lineup: fixture.lineup,
+        lineupHistory: fixture.lineupHistory,
+        createdBy: fixture.createdBy,
+        createdAt: fixture.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Update fixture lineup error:', error);
+    res.status(400).json({
+      success: false,
+      message: 'Failed to update fixture lineup',
       error: error.message
     });
   }
@@ -339,6 +470,8 @@ const deleteFixture = async (req, res) => {
 module.exports = {
   createFixture,
   getAllFixtures,
+  getFixtureById,
   updateFixture,
+  updateFixtureLineup,
   deleteFixture
 };

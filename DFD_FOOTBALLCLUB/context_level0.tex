@@ -1,0 +1,39 @@
+\documentclass[border=20pt]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, calc}
+
+\begin{document}
+\begin{tikzpicture}[
+  entity/.style={
+    rectangle, draw, thick,
+    minimum width=3.2cm, minimum height=1.2cm,
+    font=\large\bfseries, text centered
+  },
+  system/.style={
+    circle, draw, thick,
+    minimum size=4cm,
+    font=\Large\bfseries, text centered,
+    text width=3cm, align=center
+  },
+  biarr/.style={{Stealth[length=3.5mm, width=2.5mm]}-{Stealth[length=3.5mm, width=2.5mm]}, thick}
+]
+
+% ── Central System ──
+\node[system] (sys) at (0,0) {CLUB\\CONTROL};
+
+% ── External Entities (four corners) ──
+\node[entity] (admin)   at (-6, 5)  {ADMIN};
+\node[entity] (manager) at ( 6, 5)  {MANAGER};
+\node[entity] (coach)   at (-6,-5)  {COACH};
+\node[entity] (player)  at ( 6,-5)  {PLAYER};
+
+% ── Bidirectional Arrows ──
+\draw[biarr] (admin.south east)   -- (sys.north west);
+\draw[biarr] (manager.south west) -- (sys.north east);
+\draw[biarr] (coach.north east)   -- (sys.south west);
+\draw[biarr] (player.north west)  -- (sys.south east);
+
+\end{tikzpicture}
+\end{document}

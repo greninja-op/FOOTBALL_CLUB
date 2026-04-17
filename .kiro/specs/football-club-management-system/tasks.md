@@ -664,7 +664,7 @@ This phase implements coach-specific features. Requires fixtures to exist before
   - Test PerformanceTracking validates rating range
   - _Validates: Requirements 10.2, 10.6, 13.4, 16.5_
 
-- [~] 26. Checkpoint - Phase 4 Complete
+- [ ] 26. Checkpoint - Phase 4 Complete
   - Verify Coach can create lineups with drag-and-drop
   - Verify Red fitness players are excluded from lineup selection
   - Verify Coach can schedule training sessions
@@ -716,7 +716,7 @@ This phase implements player-specific features. Requires all other panels to be 
   - Test player cannot access other user profiles
   - _Validates: Requirements 12.7, 17.1, 17.2, 17.3_
 
-- [~] 28. Checkpoint - Phase 5 Complete
+- [ ] 28. Checkpoint - Phase 5 Complete
   - Verify Player can view their own profile and stats (read-only)
   - Verify Player can see fixtures and training sessions
   - Verify Player can submit leave requests
@@ -841,7 +841,7 @@ This phase implements real-time updates across all panels. Requires all panels t
   - Position in top-right corner of screen
   - _Requirements: 18.8_
 
-- [~] 34. Checkpoint - Phase 6 Complete
+- [ ] 34. Checkpoint - Phase 6 Complete
   - Verify fixture:created event updates all panels in real-time
   - Verify leave:approved event shows notification to player
   - Verify fine:issued event updates player dashboard

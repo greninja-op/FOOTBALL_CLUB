@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import FloatingNotice from './FloatingNotice';
 
 const LeaveApproval = () => {
   const { token } = useAuth();
@@ -107,68 +108,57 @@ const LeaveApproval = () => {
   };
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-4 text-gray-400">Loading...</div>;
   }
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Leave Request Approval</h2>
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {success}
-        </div>
-      )}
+    <div className="p-4">
+      <FloatingNotice message={error || success} type={error ? 'error' : 'success'} />
+      <h2 className="text-xl font-bold mb-4 text-white">Leave Request Approval</h2>
 
       {/* Pending Requests Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg shadow overflow-hidden">
         {requests.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No pending leave requests
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-white/10">
+            <thead className="bg-gray-900/40">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Player</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Player</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Start Date</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">End Date</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Duration</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Reason</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gray-800/20 divide-y divide-white/10">
               {requests.map(request => {
                 const startDate = new Date(request.startDate);
                 const endDate = new Date(request.endDate);
                 const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
                 
                 return (
-                  <tr key={request._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium">{request.playerId?.fullName}</div>
-                      <div className="text-sm text-gray-500">{request.playerId?.position}</div>
+                  <tr key={request._id} className="hover:bg-gray-700/20">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <div className="font-medium text-white">{request.playerId?.fullName}</div>
+                      <div className="text-sm text-gray-400">{request.playerId?.position}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-300">
                       {startDate.toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-300">
                       {endDate.toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-300">
                       {duration} {duration === 1 ? 'day' : 'days'}
                     </td>
-                    <td className="px-6 py-4 max-w-xs">
-                      <div className="truncate">{request.reason}</div>
+                    <td className="px-4 py-2.5 max-w-xs">
+                      <div className="truncate text-gray-300">{request.reason}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="flex gap-2">
                         <button
                           onClick={() => openConfirmModal(request, 'approve')}
@@ -195,30 +185,30 @@ const LeaveApproval = () => {
       {/* Confirmation Modal */}
       {showConfirmModal && selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
+          <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg p-4 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4 text-white">
               {actionType === 'approve' ? 'Approve' : 'Deny'} Leave Request
             </h3>
             <div className="mb-6">
-              <p className="text-gray-700 mb-2">
+              <p className="text-gray-300 mb-2">
                 <span className="font-medium">Player:</span> {selectedRequest.playerId?.fullName}
               </p>
-              <p className="text-gray-700 mb-2">
+              <p className="text-gray-300 mb-2">
                 <span className="font-medium">Dates:</span>{' '}
                 {new Date(selectedRequest.startDate).toLocaleDateString()} -{' '}
                 {new Date(selectedRequest.endDate).toLocaleDateString()}
               </p>
-              <p className="text-gray-700">
+              <p className="text-gray-300">
                 <span className="font-medium">Reason:</span> {selectedRequest.reason}
               </p>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-400 mb-6">
               Are you sure you want to {actionType} this leave request?
             </p>
             <div className="flex gap-2">
               <button
                 onClick={handleConfirm}
-                className={`flex-1 text-white py-2 px-4 rounded ${
+                className={`flex-1 text-white py-2 px-3 rounded ${
                   actionType === 'approve'
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'
@@ -232,7 +222,7 @@ const LeaveApproval = () => {
                   setSelectedRequest(null);
                   setError('');
                 }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+                className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
               >
                 Cancel
               </button>

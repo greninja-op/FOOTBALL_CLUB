@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
+const SystemLog = require('../models/SystemLog');
 
 /**
  * Authentication Routes
@@ -49,6 +50,18 @@ router.post('/login', async (req, res) => {
 
     // Call controller login function
     const result = await authController.login(email, password);
+
+    await SystemLog.create({
+      action: 'LOGIN',
+      performedBy: result.userId,
+      targetCollection: 'User',
+      targetId: result.userId,
+      changes: {
+        path: req.originalUrl,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || null
+      }
+    });
 
     // Return success response (Requirement 23.4)
     return res.status(200).json(result);

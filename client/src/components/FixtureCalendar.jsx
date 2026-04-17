@@ -1,397 +1,362 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { useSocket } from '../contexts/SocketContext'
+import { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
+import FloatingNotice from './FloatingNotice';
 
 const FixtureCalendar = () => {
-  const { token } = useAuth()
-  const { socket, events } = useSocket()
-  const [fixtures, setFixtures] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [toast, setToast] = useState(null)
+  const { token } = useAuth();
+  const { socket } = useSocket();
+  const [fixtures, setFixtures] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingFixture, setEditingFixture] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  // Fetch fixtures
   const fetchFixtures = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/fixtures`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch fixtures')
+        throw new Error('Failed to fetch fixtures');
       }
 
-      const data = await response.json()
-      setFixtures(data.fixtures)
-      setError(null)
+      const data = await response.json();
+      setFixtures(data.fixtures);
+      setError(null);
     } catch (err) {
-      setError(err.message)
-      showToast('Error fetching fixtures', 'error')
+      setError(err.message);
+      showToast('Error fetching fixtures', 'error');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchFixtures()
-  }, [token])
+    fetchFixtures();
+  }, [token]);
 
-  // Listen for fixture:created events
   useEffect(() => {
-    if (!socket) return
+    if (!socket) return;
 
-    const handleFixtureCreated = (data) => {
-      console.log('Fixture created event received:', data)
-      showToast('New fixture created')
-      fetchFixtures()
-    }
+    const handleFixtureCreated = () => {
+      showToast('New fixture created');
+      fetchFixtures();
+    };
 
-    socket.on('fixture:created', handleFixtureCreated)
+    socket.on('fixture:created', handleFixtureCreated);
 
     return () => {
-      socket.off('fixture:created', handleFixtureCreated)
-    }
-  }, [socket])
+      socket.off('fixture:created', handleFixtureCreated);
+    };
+  }, [socket]);
 
-  // Show toast notification
   const showToast = (message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
-  // Format date for display
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
-    })
-  }
+      day: 'numeric',
+    });
+  };
 
-  // Format time for display
   const formatTime = (dateString) => {
-    const date = new Date(dateString)
+    const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+      minute: '2-digit',
+    });
+  };
+
+  const handleDeleteFixture = async (fixtureId) => {
+    if (!confirm('Delete this fixture?')) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/fixtures/${fixtureId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to delete fixture');
+
+      showToast('Fixture deleted successfully');
+      fetchFixtures();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Fixture Calendar</h2>
+    <div className="p-4">
+      <FloatingNotice message={toast?.message || error} type={toast?.type || 'error'} />
+
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] text-white/45">Match Operations</p>
+          <h2 className="mt-1 text-xl font-bold text-white">Fixture Calendar</h2>
+          <p className="mt-1 text-sm text-gray-400">Create fixtures with an inline expanding form instead of a clipped overlay.</p>
+        </div>
         <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+          onClick={() => setShowCreateForm((current) => !current)}
+          className="rounded-full border border-red-500/30 bg-red-600/90 px-4 py-2 text-sm text-white transition hover:bg-red-700"
         >
-          Create Fixture
+          {showCreateForm ? 'Close Form' : 'Create Fixture'}
         </button>
       </div>
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className={`mb-4 p-4 rounded ${
-          toast.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-        }`}>
-          {toast.message}
+      <div className="ui-inline-expand mb-4" data-open={showCreateForm}>
+        <div className="ui-expand-card p-5">
+          <CreateFixturePanel
+            fixture={editingFixture}
+            onClose={() => {
+              setShowCreateForm(false);
+              setEditingFixture(null);
+            }}
+            onSuccess={(message) => {
+              setShowCreateForm(false);
+              setEditingFixture(null);
+              fetchFixtures();
+              showToast(message);
+            }}
+            onError={(message) => showToast(message, 'error')}
+          />
         </div>
-      )}
+      </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading fixtures...</p>
+      {loading ? (
+        <div className="py-8 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-red-600"></div>
+          <p className="mt-2 text-gray-400">Loading fixtures...</p>
         </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div className="bg-red-100 text-red-700 p-4 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Fixtures List */}
-      {!loading && !error && (
+      ) : error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-900/30 p-4 text-red-200">{error}</div>
+      ) : (
         <div className="space-y-4">
           {fixtures.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
+            <div className="rounded-2xl border border-white/10 bg-gray-800/30 py-8 text-center text-gray-500">
               No fixtures scheduled. Create your first fixture to get started.
-            </p>
+            </div>
           ) : (
             fixtures.map((fixture) => (
-              <div
-                key={fixture.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
-              >
-                <div className="flex justify-between items-start">
+              <div key={fixture.id} className="rounded-2xl border border-white/10 bg-gray-800/30 p-4 transition hover:bg-gray-700/20">
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        vs {fixture.opponent}
-                      </h3>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        fixture.matchType === 'League' ? 'bg-blue-100 text-blue-700' :
-                        fixture.matchType === 'Cup' ? 'bg-purple-100 text-purple-700' :
-                        fixture.matchType === 'Friendly' ? 'bg-green-100 text-green-700' :
-                        'bg-orange-100 text-orange-700'
+                    <div className="mb-2 flex items-center gap-3">
+                      <h3 className="text-lg font-semibold text-white">vs {fixture.opponent}</h3>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        fixture.matchType === 'League' ? 'bg-blue-900/40 text-blue-200 border border-blue-500/30' :
+                        fixture.matchType === 'Cup' ? 'bg-purple-900/40 text-purple-200 border border-purple-500/30' :
+                        fixture.matchType === 'Friendly' ? 'bg-green-900/40 text-green-200 border border-green-500/30' :
+                        'bg-orange-900/40 text-orange-200 border border-orange-500/30'
                       }`}>
                         {fixture.matchType}
                       </span>
                     </div>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span>{formatDate(fixture.date)}</span>
-                        <span className="text-gray-400">•</span>
-                        <span>{formatTime(fixture.date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span>{fixture.location}</span>
-                      </div>
+                    <div className="space-y-1 text-sm text-gray-400">
+                      <div>{formatDate(fixture.date)} at {formatTime(fixture.date)}</div>
+                      <div>{fixture.location}</div>
                     </div>
                   </div>
                   {fixture.lineup && fixture.lineup.length > 0 && (
                     <div className="text-sm text-gray-500">
-                      <span className="font-medium">{fixture.lineup.length}</span> players
+                      <span className="font-medium text-white">{fixture.lineup.length}</span> players
                     </div>
                   )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingFixture(fixture);
+                        setShowCreateForm(true);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="rounded-full border border-blue-500/30 px-3 py-1 text-xs text-blue-200 transition hover:bg-blue-900/30"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFixture(fixture.id || fixture._id)}
+                      className="rounded-full border border-red-500/30 px-3 py-1 text-xs text-red-200 transition hover:bg-red-900/30"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
       )}
-
-      {/* Create Fixture Modal */}
-      {showCreateModal && (
-        <CreateFixtureModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false)
-            fetchFixtures()
-            showToast('Fixture created successfully')
-          }}
-          onError={(msg) => showToast(msg, 'error')}
-        />
-      )}
     </div>
-  )
-}
+  );
+};
 
-const CreateFixtureModal = ({ onClose, onSuccess, onError }) => {
-  const { token } = useAuth()
+const CreateFixturePanel = ({ onClose, onSuccess, onError, fixture = null }) => {
+  const { token } = useAuth();
   const [formData, setFormData] = useState({
-    opponent: '',
-    date: '',
-    location: '',
-    matchType: 'League'
-  })
-  const [errors, setErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
+    opponent: fixture?.opponent || '',
+    date: fixture?.date ? new Date(fixture.date).toISOString().slice(0, 16) : '',
+    location: fixture?.location || '',
+    matchType: fixture?.matchType || 'League',
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  // Handle input change
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    // Clear error for this field
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }))
+      setErrors((prev) => ({ ...prev, [name]: null }));
     }
-  }
+  };
 
-  // Validate form
   const validate = () => {
-    const newErrors = {}
+    const nextErrors = {};
 
     if (!formData.opponent.trim()) {
-      newErrors.opponent = 'Opponent is required'
+      nextErrors.opponent = 'Opponent is required';
     }
 
     if (!formData.date) {
-      newErrors.date = 'Date is required'
+      nextErrors.date = 'Date is required';
     } else {
-      // Validate date is not in the past
-      const selectedDate = new Date(formData.date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       if (selectedDate < today) {
-        newErrors.date = 'Fixture date cannot be in the past'
+        nextErrors.date = 'Fixture date cannot be in the past';
       }
     }
 
     if (!formData.location.trim()) {
-      newErrors.location = 'Location is required'
+      nextErrors.location = 'Location is required';
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!validate()) {
-      return
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/fixtures`, {
-        method: 'POST',
+      const response = await fetch(
+        fixture
+          ? `${import.meta.env.VITE_API_URL}/api/fixtures/${fixture.id || fixture._id}`
+          : `${import.meta.env.VITE_API_URL}/api/fixtures`,
+        {
+        method: fixture ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData)
-      })
+        body: JSON.stringify(formData),
+      });
 
-      const data = await response.json()
-
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create fixture')
+        throw new Error(data.message || 'Failed to create fixture');
       }
 
-      onSuccess()
+      onSuccess(fixture ? 'Fixture updated successfully' : 'Fixture created successfully');
     } catch (err) {
-      onError(err.message)
+      onError(err.message);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h3 className="text-xl font-bold text-gray-800">Create Fixture</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Opponent Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Opponent <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="opponent"
-              value={formData.opponent}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.opponent ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Enter opponent name"
-            />
-            {errors.opponent && (
-              <p className="mt-1 text-sm text-red-500">{errors.opponent}</p>
-            )}
-          </div>
-
-          {/* Date Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.date ? 'border-red-500' : 'border-gray-300'
-              }`}
-            />
-            {errors.date && (
-              <p className="mt-1 text-sm text-red-500">{errors.date}</p>
-            )}
-          </div>
-
-          {/* Location Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.location ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Enter location"
-            />
-            {errors.location && (
-              <p className="mt-1 text-sm text-red-500">{errors.location}</p>
-            )}
-          </div>
-
-          {/* Match Type Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Match Type
-            </label>
-            <select
-              name="matchType"
-              value={formData.matchType}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="League">League</option>
-              <option value="Cup">Cup</option>
-              <option value="Friendly">Friendly</option>
-              <option value="Tournament">Tournament</option>
-            </select>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={submitting}
-            >
-              {submitting ? 'Creating...' : 'Create Fixture'}
-            </button>
-          </div>
-        </form>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-300">Opponent</label>
+        <input
+          type="text"
+          name="opponent"
+          value={formData.opponent}
+          onChange={handleChange}
+          className="ui-field"
+          placeholder="Enter opponent name"
+        />
+        {errors.opponent && <p className="mt-1 text-sm text-red-400">{errors.opponent}</p>}
       </div>
-    </div>
-  )
-}
 
-export default FixtureCalendar
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-300">Date</label>
+        <input
+          type="datetime-local"
+          name="date"
+          value={formData.date}
+          onChange={handleChange}
+          className="ui-field"
+        />
+        {errors.date && <p className="mt-1 text-sm text-red-400">{errors.date}</p>}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-300">Location</label>
+        <input
+          type="text"
+          name="location"
+          value={formData.location}
+          onChange={handleChange}
+          className="ui-field"
+          placeholder="Enter location"
+        />
+        {errors.location && <p className="mt-1 text-sm text-red-400">{errors.location}</p>}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-300">Match Type</label>
+        <select
+          name="matchType"
+          value={formData.matchType}
+          onChange={handleChange}
+          className="ui-select"
+        >
+          <option value="League">League</option>
+          <option value="Cup">Cup</option>
+          <option value="Friendly">Friendly</option>
+          <option value="Tournament">Tournament</option>
+        </select>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-gray-200 transition hover:bg-gray-700/60"
+          disabled={submitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 rounded-full bg-red-600 px-4 py-2 text-white transition hover:bg-red-700 disabled:opacity-50"
+          disabled={submitting}
+        >
+          {submitting ? 'Saving...' : fixture ? 'Update Fixture' : 'Create Fixture'}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+export default FixtureCalendar;

@@ -1,4 +1,6 @@
 const SystemLog = require('../models/SystemLog');
+const User = require('../models/User');
+const { getOnlineUserIds } = require('../utils/socketIO');
 
 /**
  * System Log Controller
@@ -37,14 +39,21 @@ exports.getAllLogs = async (req, res) => {
       }
     }
 
-    // Get logs with pagination, sorted by timestamp descending (newest first)
-    const logs = await SystemLog.find(filter)
-      .populate('performedBy', 'email role')
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await SystemLog.countDocuments(filter);
+    const [logs, total, onlineUsers, loginHistory] = await Promise.all([
+      SystemLog.find(filter)
+        .populate('performedBy', 'email role')
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(limit),
+      SystemLog.countDocuments(filter),
+      User.find({ _id: { $in: getOnlineUserIds() } })
+        .select('email role')
+        .sort({ role: 1, email: 1 }),
+      SystemLog.find({ action: 'LOGIN' })
+        .populate('performedBy', 'email role')
+        .sort({ timestamp: -1 })
+        .limit(20)
+    ]);
 
     res.status(200).json({
       success: true,
@@ -65,7 +74,21 @@ exports.getAllLogs = async (req, res) => {
         limit,
         total,
         pages: Math.ceil(total / limit)
-      }
+      },
+      onlineUsers: onlineUsers.map((user) => ({
+        id: user._id,
+        email: user.email,
+        role: user.role
+      })),
+      loginHistory: loginHistory.map((entry) => ({
+        id: entry._id,
+        timestamp: entry.timestamp,
+        performedBy: entry.performedBy ? {
+          id: entry.performedBy._id,
+          email: entry.performedBy.email,
+          role: entry.performedBy.role
+        } : null
+      }))
     });
   } catch (error) {
     console.error('Get logs error:', error);

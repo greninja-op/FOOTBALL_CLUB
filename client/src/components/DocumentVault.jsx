@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
+const getDisplayPosition = (player) => (
+  player.playerDomain?.activeMembership?.primaryPosition
+  || player.preferredPosition
+  || player.position
+  || 'N/A'
+)
+
 const DocumentVault = () => {
   const { token } = useAuth()
   const [players, setPlayers] = useState([])
@@ -181,11 +188,11 @@ const DocumentVault = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg shadow p-4">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Document Vault</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-xl font-bold text-white">Document Vault</h2>
+          <p className="text-xs text-gray-400 mt-1">
             Manage player documents and contracts
           </p>
         </div>
@@ -193,8 +200,8 @@ const DocumentVault = () => {
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`mb-4 p-4 rounded ${
-          toast.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+        <div className={`mb-4 p-3 rounded border ${
+          toast.type === 'error' ? 'bg-red-900/40 text-red-200 border-red-500/30' : 'bg-green-900/40 text-green-200 border-green-500/30'
         }`}>
           {toast.message}
         </div>
@@ -203,40 +210,40 @@ const DocumentVault = () => {
       {/* Loading State */}
       {loading && (
         <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Loading documents...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          <p className="mt-2 text-gray-400">Loading documents...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && !loading && (
-        <div className="bg-red-100 text-red-700 p-4 rounded">
+        <div className="bg-red-900/40 text-red-200 border border-red-500/30 p-3 rounded">
           {error}
         </div>
       )}
 
       {/* Documents List */}
       {!loading && !error && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {players.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
               No players found.
             </p>
           ) : (
             players.map((player) => (
-              <div key={player._id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-4">
+              <div key={player._id} className="bg-gray-800/20 border border-white/10 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-white">
                       {player.fullName || 'Unknown Player'}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {player.position} • {documents[player._id]?.length || 0} document(s)
+                    <p className="text-sm text-gray-400">
+                      {getDisplayPosition(player)} - {documents[player._id]?.length || 0} document(s)
                     </p>
                   </div>
                   <button
                     onClick={() => handleUploadClick(player)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition"
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition"
                   >
                     Upload Document
                   </button>
@@ -248,14 +255,14 @@ const DocumentVault = () => {
                     {documents[player._id].map((doc) => (
                       <div
                         key={doc._id}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded"
+                        className="flex items-center justify-between bg-gray-700/20 border border-white/10 p-3 rounded"
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-800">{doc.fileName}</p>
+                            <p className="text-sm font-medium text-white">{doc.fileName}</p>
                             <p className="text-xs text-gray-500">
                               {formatFileSize(doc.fileSize)} • Uploaded {formatDate(doc.uploadedAt)}
                             </p>
@@ -264,7 +271,7 @@ const DocumentVault = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleDownload(doc._id, doc.fileName)}
-                            className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50 transition"
+                            className="text-blue-400 hover:text-blue-300 p-2 rounded hover:bg-blue-900/20 transition"
                             title="Download"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +280,7 @@ const DocumentVault = () => {
                           </button>
                           <button
                             onClick={() => handleDelete(doc._id, player._id)}
-                            className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50 transition"
+                            className="text-red-400 hover:text-red-300 p-2 rounded hover:bg-red-900/20 transition"
                             title="Delete"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,14 +407,14 @@ const UploadDocumentModal = ({ player, onClose, onSuccess, onError }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h3 className="text-xl font-bold text-gray-800">
+      <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="flex justify-between items-center p-4 border-b border-white/10">
+          <h3 className="text-xl font-bold text-white">
             Upload Document for {player.fullName}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition"
+            className="text-gray-400 hover:text-gray-300 transition"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -415,17 +422,17 @@ const UploadDocumentModal = ({ player, onClose, onSuccess, onError }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* File Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Document <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Select Document <span className="text-red-400">*</span>
             </label>
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded focus:outline-none focus:ring-2 focus:ring-red-500"
             />
             <p className="mt-1 text-xs text-gray-500">
               Allowed: PDF, JPEG, PNG (Max 10MB)
@@ -434,11 +441,11 @@ const UploadDocumentModal = ({ player, onClose, onSuccess, onError }) => {
 
           {/* Selected File Info */}
           {file && (
-            <div className="bg-blue-50 p-3 rounded">
-              <p className="text-sm text-blue-800">
+            <div className="bg-blue-900/40 border border-blue-500/30 p-3 rounded">
+              <p className="text-sm text-blue-200">
                 <span className="font-medium">Selected:</span> {file.name}
               </p>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-blue-300 mt-1">
                 Size: {(file.size / (1024 * 1024)).toFixed(2)} MB
               </p>
             </div>
@@ -446,7 +453,7 @@ const UploadDocumentModal = ({ player, onClose, onSuccess, onError }) => {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-100 text-red-700 p-3 rounded text-sm">
+            <div className="bg-red-900/40 border border-red-500/30 text-red-200 p-3 rounded text-sm">
               {error}
             </div>
           )}
@@ -456,14 +463,14 @@ const UploadDocumentModal = ({ player, onClose, onSuccess, onError }) => {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
+              className="flex-1 px-3 py-1.5 bg-gray-700/40 border border-white/10 text-white rounded hover:bg-gray-700/60 transition"
               disabled={uploading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={uploading || !file}
             >
               {uploading ? 'Uploading...' : 'Upload'}

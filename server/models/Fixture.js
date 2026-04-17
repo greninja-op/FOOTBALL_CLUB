@@ -45,6 +45,29 @@ const FixtureSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile'
   }],
+  lineupHistory: [{
+    version: {
+      type: Number,
+      required: true
+    },
+    savedAt: {
+      type: Date,
+      default: Date.now
+    },
+    savedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    formation: {
+      type: String,
+      default: null
+    },
+    lineup: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Profile'
+    }]
+  }],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

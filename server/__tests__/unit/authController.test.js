@@ -14,10 +14,8 @@ describe('Unit Tests: Authentication Controller (Task 5.3)', () => {
   const JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key';
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    process.env.JWT_SECRET = JWT_SECRET;
+    await mongoose.connect(process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/football_club_test');
 
     app = express();
     app.use(express.json());
@@ -29,7 +27,7 @@ describe('Unit Tests: Authentication Controller (Task 5.3)', () => {
     await mongoose.connection.close();
   });
 
-  afterEach(async () => {
+  beforeEach(async () => {
     const collections = mongoose.connection.collections;
     for (const key in collections) {
       await collections[key].deleteMany();
@@ -171,8 +169,9 @@ describe('Unit Tests: Authentication Controller (Task 5.3)', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('id', user._id.toString());
-      expect(response.body).toHaveProperty('role', 'player');
+      expect(response.body).toHaveProperty('valid', true);
+      expect(response.body).toHaveProperty('user.id', user._id.toString());
+      expect(response.body).toHaveProperty('user.role', 'player');
     });
 
     it('should reject requests without token', async () => {

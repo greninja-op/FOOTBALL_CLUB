@@ -1,0 +1,46 @@
+\documentclass[border=20pt]{standalone}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, shapes.geometric}
+
+\begin{document}
+\begin{tikzpicture}[
+  entity/.style={rectangle, draw, thick, minimum width=3cm, minimum height=1.1cm, font=\normalsize\bfseries, text centered},
+  process/.style={circle, draw, thick, minimum size=2.4cm, font=\small\bfseries, text width=2cm, align=center},
+  datastore/.style={cylinder, draw, thick, shape border rotate=90, aspect=0.25, minimum width=2.2cm, minimum height=1.4cm, font=\small\bfseries, text centered},
+  biarr/.style={{Stealth[length=3mm, width=2mm]}-{Stealth[length=3mm, width=2mm]}, thick}
+]
+
+\node[entity] (admin) at (0, 6) {ADMIN};
+
+\node[process] (p1) at (-7, 2.5) {LOGIN};
+\node[process] (p2) at (-3.5, 2.5) {MANAGE\\USERS};
+\node[process] (p3) at (0, 2.5) {ARCHIVE\\PLAYERS};
+\node[process] (p4) at (3.5, 2.5) {CLUB\\SETTINGS};
+\node[process] (p5) at (7, 2.5) {SYSTEM\\LOGS};
+
+\node[datastore] (d1) at (-7, -1.5) {USERS};
+\node[datastore] (d2) at (-3.5, -1.5) {PROFILES};
+\node[datastore] (d3) at (0, -1.5) {ARCHIVED\\PLAYERS};
+\node[datastore] (d4) at (3.5, -1.5) {SETTINGS};
+\node[datastore] (d5) at (7, -1.5) {SYSTEM\\LOGS};
+
+\draw[biarr] (admin.south) -- (p1.north);
+\draw[biarr] (admin.south) -- (p2.north);
+\draw[biarr] (admin.south) -- (p3.north);
+\draw[biarr] (admin.south) -- (p4.north);
+\draw[biarr] (admin.south) -- (p5.north);
+
+\draw[biarr] (p1.south) -- (d1.north);
+\draw[biarr] (p2.south) -- (d2.north);
+\draw[biarr] (p3.south) -- (d3.north);
+\draw[biarr] (p4.south) -- (d4.north);
+\draw[biarr] (p5.south) -- (d5.north);
+
+\draw[biarr] (p2.south east) -- (d5.north west);
+\draw[biarr] (p3.south west) -- (d2.north east);
+\draw[biarr] (p1.south east) -- (d2.north west);
+
+\end{tikzpicture}
+\end{document}

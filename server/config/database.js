@@ -25,11 +25,7 @@ const connectDB = async () => {
       
       // Automatic reconnection
       retryWrites: true,
-      retryReads: true,
-      
-      // Use new URL parser
-      useNewUrlParser: true,
-      useUnifiedTopology: true
+      retryReads: true
     };
 
     // Attempt connection
