@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
 
 const LeaveApproval = () => {
   const { token } = useAuth();
@@ -160,18 +161,20 @@ const LeaveApproval = () => {
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="flex gap-2">
-                        <button
+                        <UiButton
                           onClick={() => openConfirmModal(request, 'approve')}
-                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                          variant="success"
+                          size="sm"
                         >
                           Approve
-                        </button>
-                        <button
+                        </UiButton>
+                        <UiButton
                           onClick={() => openConfirmModal(request, 'deny')}
-                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                          variant="danger"
+                          size="sm"
                         >
                           Deny
-                        </button>
+                        </UiButton>
                       </div>
                     </td>
                   </tr>
@@ -206,26 +209,24 @@ const LeaveApproval = () => {
               Are you sure you want to {actionType} this leave request?
             </p>
             <div className="flex gap-2">
-              <button
+              <UiButton
                 onClick={handleConfirm}
-                className={`flex-1 text-white py-2 px-3 rounded ${
-                  actionType === 'approve'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
+                variant={actionType === 'approve' ? 'success' : 'danger'}
+                className="flex-1"
               >
                 Confirm {actionType === 'approve' ? 'Approval' : 'Denial'}
-              </button>
-              <button
+              </UiButton>
+              <UiButton
                 onClick={() => {
                   setShowConfirmModal(false);
                   setSelectedRequest(null);
                   setError('');
                 }}
-                className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
+                variant="secondary"
+                className="flex-1"
               >
                 Cancel
-              </button>
+              </UiButton>
             </div>
           </div>
         </div>

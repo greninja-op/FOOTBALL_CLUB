@@ -5,6 +5,9 @@ const fs = require('fs').promises;
 const sharp = require('sharp');
 const { sanitizeText } = require('../utils/sanitize');
 
+const getUploadRoot = () => path.resolve(process.env.UPLOAD_DIR || './uploads');
+const getLogoUploadDir = () => path.join(getUploadRoot(), 'logos');
+
 const sanitizeOptionalText = (value) => {
   if (value === undefined || value === null) {
     return value;
@@ -20,10 +23,24 @@ const normalizeTrophies = (trophies) => {
 
   return trophies
     .map((entry) => ({
-      title: sanitizeOptionalText(entry?.title || ''),
-      year: sanitizeOptionalText(entry?.year || '')
+      competitionName: sanitizeOptionalText(entry?.competitionName || entry?.title || ''),
+      seasonIdentifier: sanitizeOptionalText(entry?.seasonIdentifier || ''),
+      trophyAsset: sanitizeOptionalText(entry?.trophyAsset || ''),
+      year: sanitizeOptionalText(entry?.year || ''),
+      manager: sanitizeOptionalText(entry?.manager || ''),
+      captain: sanitizeOptionalText(entry?.captain || ''),
+      finalResult: sanitizeOptionalText(entry?.finalResult || ''),
+      playersInvolved: Array.isArray(entry?.playersInvolved)
+        ? entry.playersInvolved
+            .map((player) => ({
+              name: sanitizeOptionalText(player?.name || ''),
+              avatarUrl: sanitizeOptionalText(player?.avatarUrl || '')
+            }))
+            .filter((player) => player.name)
+        : [],
+      reportUrl: sanitizeOptionalText(entry?.reportUrl || '')
     }))
-    .filter((entry) => entry.title && entry.year)
+    .filter((entry) => entry.competitionName && entry.year)
     .slice(0, 8);
 };
 
@@ -50,7 +67,7 @@ const serializeSettings = (settings) => ({
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = getLogoUploadDir();
     try {
       await fs.mkdir(uploadDir, { recursive: true });
       cb(null, uploadDir);
@@ -60,17 +77,17 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname).toLowerCase());
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  // Accept only JPEG and PNG
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  // Accept common web image formats used by modern browsers.
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG and PNG are allowed.'), false);
+    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);
   }
 };
 
@@ -198,6 +215,8 @@ const updateSettings = async (req, res) => {
  * @access Admin only
  */
 const uploadLogo = async (req, res) => {
+  let optimizedPath = null;
+
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -207,32 +226,39 @@ const uploadLogo = async (req, res) => {
     }
 
     const filePath = req.file.path;
-    const optimizedPath = filePath.replace(path.extname(filePath), '-optimized' + path.extname(filePath));
+    const optimizedFileName = `logo-${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
+    const logoDirectory = getLogoUploadDir();
+    optimizedPath = path.join(logoDirectory, optimizedFileName);
+    await fs.mkdir(logoDirectory, { recursive: true });
 
-    // Optimize image using sharp
+    // Always convert to webp to avoid extension/format mismatch issues.
     await sharp(filePath)
+      .rotate()
       .resize(1920, null, { // Max width 1920px, maintain aspect ratio
         withoutEnlargement: true,
         fit: 'inside'
       })
-      .jpeg({ quality: 85 })
-      .png({ quality: 85, compressionLevel: 9 })
+      .webp({ quality: 86 })
       .toFile(optimizedPath);
 
     // Delete original file
     await fs.unlink(filePath);
 
     // Generate URL for the optimized file
-    const logoUrl = `/uploads/${path.basename(optimizedPath)}`;
+    const logoUrl = `/uploads/logos/${optimizedFileName}`;
 
     // Update settings with new logo URL
     const settings = await Settings.getSingleton();
     
     // Delete old logo file if exists
     if (settings.logoUrl) {
-      const oldLogoPath = path.join(process.env.UPLOAD_DIR || './uploads', path.basename(settings.logoUrl));
+      const oldRelativePath = settings.logoUrl.replace(/^\/uploads\//, '');
+      const oldLogoPath = path.join(getUploadRoot(), oldRelativePath);
+
       try {
-        await fs.unlink(oldLogoPath);
+        if (oldLogoPath !== optimizedPath) {
+          await fs.unlink(oldLogoPath);
+        }
       } catch (error) {
         // Ignore if file doesn't exist
         console.log('Old logo file not found or already deleted');
@@ -259,12 +285,20 @@ const uploadLogo = async (req, res) => {
   } catch (error) {
     console.error('Upload logo error:', error);
     
-    // Clean up uploaded file on error
+    // Clean up uploaded files on error
     if (req.file) {
       try {
         await fs.unlink(req.file.path);
       } catch (unlinkError) {
         console.error('Error deleting failed upload:', unlinkError);
+      }
+    }
+
+    if (optimizedPath) {
+      try {
+        await fs.unlink(optimizedPath);
+      } catch (optimizedCleanupError) {
+        // Best-effort cleanup only.
       }
     }
 

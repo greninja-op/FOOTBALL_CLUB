@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
+import UiSelect from './ui/UiSelect';
+import UiCalendarInput from './ui/UiCalendarInput';
 
 const getDisplayPosition = (player) => (
   player.playerDomain?.activeMembership?.primaryPosition
@@ -13,9 +16,8 @@ const SquadHealth = () => {
   const { token } = useAuth();
   const [players, setPlayers] = useState([]);
   const [injuries, setInjuries] = useState([]);
-  const [showInjuryModal, setShowInjuryModal] = useState(false);
-  const [showFitnessModal, setShowFitnessModal] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [expandedInjuryPlayerId, setExpandedInjuryPlayerId] = useState(null);
+  const [updatingFitnessPlayerId, setUpdatingFitnessPlayerId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -23,11 +25,6 @@ const SquadHealth = () => {
     injuryType: '',
     severity: 'Minor',
     expectedRecovery: '',
-    notes: ''
-  });
-
-  const [fitnessForm, setFitnessForm] = useState({
-    status: 'Green',
     notes: ''
   });
 
@@ -68,7 +65,7 @@ const SquadHealth = () => {
     }
   };
 
-  const handleLogInjury = async (e) => {
+  const handleLogInjury = async (e, playerId) => {
     e.preventDefault();
     setError('');
 
@@ -80,7 +77,7 @@ const SquadHealth = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          playerId: selectedPlayer._id,
+          playerId,
           ...injuryForm
         })
       });
@@ -89,9 +86,8 @@ const SquadHealth = () => {
       
       if (data.success) {
         setSuccess('Injury logged successfully');
-        setShowInjuryModal(false);
+        setExpandedInjuryPlayerId(null);
         setInjuryForm({ injuryType: '', severity: 'Minor', expectedRecovery: '', notes: '' });
-        setSelectedPlayer(null);
         fetchPlayers();
         fetchInjuries();
         setTimeout(() => setSuccess(''), 3000);
@@ -103,42 +99,8 @@ const SquadHealth = () => {
     }
   };
 
-  const handleUpdateFitness = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/profiles/${getUserId(selectedPlayer)}/fitness`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(fitnessForm)
-        }
-      );
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSuccess('Fitness status updated successfully');
-        setShowFitnessModal(false);
-        setFitnessForm({ status: 'Green', notes: '' });
-        setSelectedPlayer(null);
-        fetchPlayers();
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(data.message || 'Failed to update fitness status');
-      }
-    } catch (err) {
-      setError('Failed to update fitness status');
-    }
-  };
-
   const updateFitnessInline = async (player, status) => {
-    setSelectedPlayer(player);
+    setUpdatingFitnessPlayerId(player._id);
     setError('');
 
     try {
@@ -166,7 +128,7 @@ const SquadHealth = () => {
     } catch (err) {
       setError('Failed to update fitness status');
     } finally {
-      setSelectedPlayer(null);
+      setUpdatingFitnessPlayerId(null);
     }
   };
 
@@ -204,119 +166,174 @@ const SquadHealth = () => {
   return (
     <div className="p-4">
       <FloatingNotice message={error || success} type={error ? 'error' : 'success'} />
-      <h2 className="text-xl font-bold mb-4 text-white">Squad Health</h2>
+      <h2 className="mb-4 text-xl font-bold text-white">Squad Health</h2>
 
       {/* Fitness Status Grid */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-4 text-white">Fitness Status</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {players.map(player => (
-            <div key={player._id} className="bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4 rounded-lg shadow">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="font-medium text-white">{player.fullName}</div>
-                  <div className="text-sm text-gray-400">{getDisplayPosition(player)}</div>
-                  <div className="mt-1">
-                    <span className={`px-2 py-1 rounded text-xs font-medium border ${
-                      player.availabilityStatus === 'manual-unavailable' || player.availabilityStatus === 'injured' || player.availabilityStatus === 'leave'
-                        ? 'bg-red-900/40 text-red-200 border-red-500/30'
-                        : player.availabilityStatus === 'listed' || player.availabilityStatus === 'suspended'
-                        ? 'bg-yellow-900/40 text-yellow-200 border-yellow-500/30'
-                        : 'bg-green-900/40 text-green-200 border-green-500/30'
-                    }`}>
-                      {player.availabilityStatus || 'available'}
-                    </span>
+        <h3 className="mb-4 text-lg font-semibold text-white">Fitness Status</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {players.map((player) => {
+            const isExpanded = expandedInjuryPlayerId === player._id;
+
+            return (
+              <div key={player._id} className="rounded-2xl border border-white/10 bg-gray-800/40 p-4 shadow backdrop-blur-sm">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-medium text-white">{player.fullName}</div>
+                    <div className="text-sm text-gray-400">{getDisplayPosition(player)}</div>
+                    <div className="mt-1">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-medium ${
+                        player.availabilityStatus === 'manual-unavailable' || player.availabilityStatus === 'injured' || player.availabilityStatus === 'leave'
+                          ? 'border-red-500/30 bg-red-900/40 text-red-200'
+                          : player.availabilityStatus === 'listed' || player.availabilityStatus === 'suspended'
+                            ? 'border-yellow-500/30 bg-yellow-900/40 text-yellow-200'
+                            : 'border-green-500/30 bg-green-900/40 text-green-200'
+                      }`}>
+                        {player.availabilityStatus || 'available'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <UiSelect
+                    value={player.fitnessStatus || 'Green'}
+                    onChange={(event) => updateFitnessInline(player, event.target.value)}
+                    disabled={updatingFitnessPlayerId === player._id}
+                    className={`min-w-[7.5rem] ${
+                      player.fitnessStatus === 'Green' ? 'border-green-500/30 bg-green-900/25 text-green-200' :
+                      player.fitnessStatus === 'Yellow' ? 'border-yellow-500/30 bg-yellow-900/25 text-yellow-200' :
+                      'border-red-500/30 bg-red-900/25 text-red-200'
+                    }`}
+                  >
+                    <option value="Green">Green</option>
+                    <option value="Yellow">Yellow</option>
+                    <option value="Red">Red</option>
+                  </UiSelect>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <UiButton
+                    onClick={() => {
+                      setExpandedInjuryPlayerId(isExpanded ? null : player._id);
+                      setInjuryForm({ injuryType: '', severity: 'Minor', expectedRecovery: '', notes: '' });
+                    }}
+                    variant={isExpanded ? 'secondary' : 'danger'}
+                    className="flex-1"
+                  >
+                    {isExpanded ? 'Close Injury Form' : 'Log Injury'}
+                  </UiButton>
+                </div>
+
+                <div className="ui-inline-expand mt-3" data-open={isExpanded}>
+                  <div className="ui-expand-card p-4">
+                    <form onSubmit={(event) => handleLogInjury(event, player._id)}>
+                      <div className="mb-3">
+                        <label className="mb-1 block text-sm font-medium text-gray-300">Injury Type</label>
+                        <input
+                          type="text"
+                          value={injuryForm.injuryType}
+                          onChange={(event) => setInjuryForm({ ...injuryForm, injuryType: event.target.value })}
+                          className="ui-field"
+                          placeholder="Hamstring strain"
+                          required
+                        />
+                      </div>
+
+                      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-300">Severity</label>
+                          <UiSelect
+                            value={injuryForm.severity}
+                            onChange={(event) => setInjuryForm({ ...injuryForm, severity: event.target.value })}
+                          >
+                            <option value="Minor">Minor</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Severe">Severe</option>
+                          </UiSelect>
+                        </div>
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-300">Expected Recovery</label>
+                          <UiCalendarInput
+                            value={injuryForm.expectedRecovery}
+                            onChange={(event) => setInjuryForm({ ...injuryForm, expectedRecovery: event.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <label className="mb-1 block text-sm font-medium text-gray-300">Notes</label>
+                        <textarea
+                          value={injuryForm.notes}
+                          onChange={(event) => setInjuryForm({ ...injuryForm, notes: event.target.value })}
+                          className="ui-textarea"
+                          rows="3"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <UiButton type="button" variant="secondary" onClick={() => setExpandedInjuryPlayerId(null)}>
+                          Cancel
+                        </UiButton>
+                        <UiButton type="submit" variant="danger">
+                          Save Injury
+                        </UiButton>
+                      </div>
+                    </form>
                   </div>
                 </div>
-                <select
-                  value={player.fitnessStatus || 'Green'}
-                  onChange={(event) => updateFitnessInline(player, event.target.value)}
-                  className={`rounded border px-2 py-1 text-sm font-semibold ${
-                    player.fitnessStatus === 'Green' ? 'bg-green-900/40 text-green-200 border-green-500/30' :
-                    player.fitnessStatus === 'Yellow' ? 'bg-yellow-900/40 text-yellow-200 border-yellow-500/30' :
-                    'bg-red-900/40 text-red-200 border-red-500/30'
-                  }`}
-                >
-                  <option value="Green">Green</option>
-                  <option value="Yellow">Yellow</option>
-                  <option value="Red">Red</option>
-                </select>
               </div>
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => {
-                    setSelectedPlayer(player);
-                    setFitnessForm({ status: player.fitnessStatus, notes: '' });
-                    setShowFitnessModal(true);
-                  }}
-                  className="flex-1 text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                >
-                  Update Fitness
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedPlayer(player);
-                    setShowInjuryModal(true);
-                  }}
-                  className="flex-1 text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                >
-                  Log Injury
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Active Injuries List */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-white">Active Injuries</h3>
+        <h3 className="mb-4 text-lg font-semibold text-white">Active Injuries</h3>
         {injuries.length === 0 ? (
-          <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 p-8 rounded-lg shadow text-center text-gray-500">
+          <div className="rounded-lg border border-white/10 bg-gray-800/40 p-8 text-center text-gray-500 shadow backdrop-blur-sm">
             No active injuries
           </div>
         ) : (
-          <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg shadow overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-gray-800/40 shadow backdrop-blur-sm">
             <table className="min-w-full divide-y divide-white/10">
               <thead className="bg-gray-900/40">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Player</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Injury Type</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Severity</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Expected Recovery</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase">Actions</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-300">Player</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-300">Injury Type</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-300">Severity</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-300">Expected Recovery</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-gray-300">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-gray-800/20 divide-y divide-white/10">
-                {injuries.map(injury => (
+              <tbody className="divide-y divide-white/10 bg-gray-800/20">
+                {injuries.map((injury) => (
                   <tr key={injury.id} className="hover:bg-gray-700/20">
-                    <td className="px-4 py-2.5 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-4 py-2.5">
                       <div className="font-medium text-white">{injury.playerId?.fullName}</div>
                       <div className="text-sm text-gray-400">{injury.playerId?.position}</div>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-300">{injury.injuryType}</td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold border ${
-                        injury.severity === 'Minor' ? 'bg-yellow-900/40 text-yellow-200 border-yellow-500/30' :
-                        injury.severity === 'Moderate' ? 'bg-orange-900/40 text-orange-200 border-orange-500/30' :
-                        'bg-red-900/40 text-red-200 border-red-500/30'
+                    <td className="whitespace-nowrap px-4 py-2.5 text-gray-300">{injury.injuryType}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${
+                        injury.severity === 'Minor'
+                          ? 'border-yellow-500/30 bg-yellow-900/40 text-yellow-200'
+                          : injury.severity === 'Moderate'
+                            ? 'border-orange-500/30 bg-orange-900/40 text-orange-200'
+                            : 'border-red-500/30 bg-red-900/40 text-red-200'
                       }`}>
                         {injury.severity}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-gray-300">
-                      {injury.expectedRecovery 
+                    <td className="whitespace-nowrap px-4 py-2.5 text-gray-300">
+                      {injury.expectedRecovery
                         ? new Date(injury.expectedRecovery).toLocaleDateString()
-                        : 'N/A'
-                      }
+                        : 'N/A'}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <button
-                        onClick={() => handleMarkRecovered(injury.id)}
-                        className="text-green-400 hover:text-green-300 font-medium"
-                      >
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      <UiButton onClick={() => handleMarkRecovered(injury.id)} size="sm" variant="success">
                         Mark Recovered
-                      </button>
+                      </UiButton>
                     </td>
                   </tr>
                 ))}
@@ -325,152 +342,6 @@ const SquadHealth = () => {
           </div>
         )}
       </div>
-
-      {/* Log Injury Modal */}
-      {showInjuryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg p-4 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-white">
-              Log Injury - {selectedPlayer?.fullName}
-            </h3>
-            <form onSubmit={handleLogInjury}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Injury Type
-                </label>
-                <input
-                  type="text"
-                  value={injuryForm.injuryType}
-                  onChange={(e) => setInjuryForm({ ...injuryForm, injuryType: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
-                  placeholder="e.g., Hamstring strain"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Severity
-                </label>
-                <select
-                  value={injuryForm.severity}
-                  onChange={(e) => setInjuryForm({ ...injuryForm, severity: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
-                >
-                  <option value="Minor">Minor</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Severe">Severe</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Expected Recovery Date
-                </label>
-                <input
-                  type="date"
-                  value={injuryForm.expectedRecovery}
-                  onChange={(e) => setInjuryForm({ ...injuryForm, expectedRecovery: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={injuryForm.notes}
-                  onChange={(e) => setInjuryForm({ ...injuryForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
-                  rows="3"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded hover:bg-red-700"
-                >
-                  Log Injury
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowInjuryModal(false);
-                    setInjuryForm({ injuryType: '', severity: 'Minor', expectedRecovery: '', notes: '' });
-                    setSelectedPlayer(null);
-                    setError('');
-                  }}
-                  className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Update Fitness Modal */}
-      {showFitnessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg p-4 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-white">
-              Update Fitness - {selectedPlayer?.fullName}
-            </h3>
-            <form onSubmit={handleUpdateFitness}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Fitness Status
-                </label>
-                <select
-                  value={fitnessForm.status}
-                  onChange={(e) => setFitnessForm({ ...fitnessForm, status: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
-                >
-                  <option value="Green">Green</option>
-                  <option value="Yellow">Yellow</option>
-                  <option value="Red">Red</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={fitnessForm.notes}
-                  onChange={(e) => setFitnessForm({ ...fitnessForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
-                  rows="3"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700"
-                >
-                  Update
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFitnessModal(false);
-                    setFitnessForm({ status: 'Green', notes: '' });
-                    setSelectedPlayer(null);
-                    setError('');
-                  }}
-                  className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

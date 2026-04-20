@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
 
 const PerformanceTracking = () => {
   const { token } = useAuth();
@@ -281,12 +282,13 @@ const PerformanceTracking = () => {
                 </div>
               </div>
 
-              <button
+              <UiButton
                 type="submit"
-                className="w-full bg-red-600 text-white py-1.5 px-3 rounded hover:bg-red-700 text-sm transition"
+                variant="primary"
+                className="w-full"
               >
                 Update Stats
-              </button>
+              </UiButton>
             </form>
           ) : (
             <p className="text-gray-400 text-center py-8 text-sm">
@@ -308,12 +310,13 @@ const PerformanceTracking = () => {
                   rows="3"
                   placeholder="Add a private note about this player's performance..."
                 />
-                <button
+                <UiButton
                   type="submit"
-                  className="w-full bg-green-600 text-white py-1.5 px-3 rounded hover:bg-green-700 text-sm transition"
+                  variant="success"
+                  className="w-full"
                 >
                   Add Note
-                </button>
+                </UiButton>
               </form>
 
               <div className="border-t border-white/10 pt-3">

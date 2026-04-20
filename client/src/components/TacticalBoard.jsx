@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
+import UiSelect from './ui/UiSelect';
 
 const FORMATIONS = {
   '4-4-2': [
@@ -468,28 +470,29 @@ const TacticalBoard = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <UiButton
             onClick={handlePrintOfficialRoster}
-            className="rounded-full border border-emerald-500/30 bg-emerald-700/40 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-700/60"
+            variant="success"
+            className="px-4"
           >
             Print Official Roster
-          </button>
-          <button
+          </UiButton>
+          <UiButton
             onClick={() => window.print()}
-            className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/60"
+            variant="secondary"
+            className="px-4"
           >
             Print Pitch
-          </button>
+          </UiButton>
         </div>
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-300">Select Fixture</label>
-          <select
+          <UiSelect
             value={selectedFixture}
             onChange={(event) => setSelectedFixture(event.target.value)}
-            className="ui-select"
           >
             <option value="">-- Select a fixture --</option>
             {fixtures.map((fixture) => (
@@ -497,29 +500,29 @@ const TacticalBoard = () => {
                 {new Date(fixture.date).toLocaleDateString()} - vs {fixture.opponent} ({fixture.location})
               </option>
             ))}
-          </select>
+          </UiSelect>
         </div>
 
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-300">Formation</label>
           <div className="flex flex-wrap gap-2">
             {Object.keys(FORMATIONS).map((shape) => (
-              <button
+              <UiButton
                 key={shape}
                 onClick={() => setFormation(shape)}
-                className={`rounded px-3 py-1.5 text-sm ${
-                  formation === shape ? 'bg-red-600 text-white' : 'bg-gray-700/40 border border-white/10 text-white hover:bg-gray-700/60'
-                }`}
+                variant={formation === shape ? 'primary' : 'secondary'}
+                size="sm"
               >
                 {shape}
-              </button>
+              </UiButton>
             ))}
-            <button
+            <UiButton
               onClick={autoFillLineup}
-              className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700"
+              variant="success"
+              size="sm"
             >
               Auto Fill
-            </button>
+            </UiButton>
           </div>
         </div>
       </div>
@@ -566,7 +569,7 @@ const TacticalBoard = () => {
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={dropBackToPool}
-              className="grid max-h-[31rem] min-h-[24rem] grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-dashed border-white/10 p-2 pr-1 custom-scrollbar sm:grid-cols-2"
+              className="grid max-h-[31rem] min-h-[24rem] grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-white/15 p-2 pr-1 no-scrollbar sm:grid-cols-2"
             >
               {availableBenchPool.map((player) => (
                 <PlayerToken
@@ -587,26 +590,30 @@ const TacticalBoard = () => {
           <div
             onDragOver={(event) => event.preventDefault()}
             onDrop={dropOnBench}
-            className="min-h-44 rounded-lg border border-dashed border-green-500/30 bg-green-900/20 p-4"
+            className="min-h-44 rounded-lg border border-green-500/30 bg-green-900/20 p-4"
           >
             {bench.length === 0 ? (
               <p className="mt-8 text-center text-sm text-gray-500">Drag players here for the bench</p>
             ) : (
-              bench.map((player) => (
-                <div key={player.id || player._id} className="mb-2 flex items-center gap-2">
-                  <PlayerToken
-                    player={player}
-                    compact
-                    onDragStart={() => handleDragStart({ type: 'bench', player })}
-                  />
-                  <button
-                    onClick={() => removeFromBench(player.id || player._id)}
-                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {bench.map((player) => (
+                  <div key={player.id || player._id} className="rounded-xl border border-white/10 bg-gray-800/35 p-2">
+                    <PlayerToken
+                      player={player}
+                      compact
+                      onDragStart={() => handleDragStart({ type: 'bench', player })}
+                    />
+                    <UiButton
+                      onClick={() => removeFromBench(player.id || player._id)}
+                      variant="danger"
+                      size="sm"
+                      className="mt-2 w-full"
+                    >
+                      Remove
+                    </UiButton>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </aside>
@@ -669,13 +676,14 @@ const TacticalBoard = () => {
             </div>
           </div>
 
-          <button
+          <UiButton
             onClick={saveLineup}
             disabled={!selectedFixture}
-            className="mt-4 w-full rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-700/40"
+            variant="primary"
+            className="mt-4 w-full"
           >
             Save Lineup
-          </button>
+          </UiButton>
         </section>
 
         <aside>
@@ -699,18 +707,20 @@ const TacticalBoard = () => {
                     placeholder="Manual note for override"
                   />
                   <div className="mt-2 flex gap-2">
-                    <button
+                    <UiButton
                       onClick={() => submitAvailabilityOverride(player.id, 'available')}
-                      className="rounded bg-green-600 px-2 py-1 text-xs font-semibold text-white hover:bg-green-700"
+                      variant="success"
+                      size="sm"
                     >
                       Force Available
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       onClick={() => submitAvailabilityOverride(player.id, 'auto')}
-                      className="rounded bg-gray-700/40 border border-white/10 px-2 py-1 text-xs font-semibold text-white hover:bg-gray-700/60"
+                      variant="secondary"
+                      size="sm"
                     >
                       Back to Auto
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
               ))
@@ -719,7 +729,7 @@ const TacticalBoard = () => {
 
           <h3 className="mb-3 mt-6 text-lg font-semibold text-white">Manual Availability Controls</h3>
           <div className="rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
-            <div className="grid max-h-[31rem] grid-cols-1 gap-3 overflow-y-auto pr-1 custom-scrollbar sm:grid-cols-2">
+            <div className="grid max-h-[31rem] grid-cols-1 gap-3 overflow-y-auto pr-1 no-scrollbar sm:grid-cols-2">
               {players.slice(0, 6).map((player) => (
                 <div key={`manual-${player.id}`} className="rounded-lg bg-gray-700/20 border border-white/10 p-3">
                   <div className="font-medium text-white">{player.fullName}</div>
@@ -731,18 +741,20 @@ const TacticalBoard = () => {
                     placeholder="Manual note"
                   />
                   <div className="mt-2 flex gap-2">
-                    <button
+                    <UiButton
                       onClick={() => submitAvailabilityOverride(player.id, 'unavailable')}
-                      className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                      variant="danger"
+                      size="sm"
                     >
                       Mark Unavailable
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton
                       onClick={() => submitAvailabilityOverride(player.id, 'auto')}
-                      className="rounded bg-gray-700/40 border border-white/10 px-2 py-1 text-xs font-semibold text-white hover:bg-gray-700/60"
+                      variant="secondary"
+                      size="sm"
                     >
                       Auto
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
               ))}

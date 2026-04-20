@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
+import UiCalendarInput from './ui/UiCalendarInput';
 
 const getDisplayPosition = (player) => (
   player.playerDomain?.activeMembership?.primaryPosition
@@ -182,12 +184,12 @@ const TrainingSchedule = () => {
       <FloatingNotice message={error || success} type={error ? 'error' : 'success'} />
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Training Schedule</h2>
-        <button
+        <UiButton
           onClick={() => setShowCreateModal(true)}
-          className="bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 text-sm"
+          variant="primary"
         >
           Create Session
-        </button>
+        </UiButton>
       </div>
 
       {/* Training Sessions Calendar */}
@@ -208,12 +210,13 @@ const TrainingSchedule = () => {
                     <div className="text-gray-400 mt-1">{session.drillDescription}</div>
                     <div className="text-sm text-gray-500 mt-1">Duration: {session.duration} minutes</div>
                   </div>
-                  <button
+                  <UiButton
                     onClick={() => setSelectedSession(selectedSession === session.id ? null : session.id)}
-                    className="text-red-400 hover:text-red-300"
+                    variant="ghost"
+                    size="sm"
                   >
                     {selectedSession === session.id ? 'Hide' : 'Mark'} Attendance
-                  </button>
+                  </UiButton>
                 </div>
 
                 {/* Attendance Tracker */}
@@ -251,17 +254,14 @@ const TrainingSchedule = () => {
                             </div>
                             <div className="flex gap-2">
                               {['Present', 'Absent', 'Excused'].map(status => (
-                                <button
+                                <UiButton
                                   key={status}
                                   onClick={() => markAttendance(session.id, player._id, status)}
-                                  className={`px-3 py-1 rounded text-sm ${
-                                    attendance?.status === status
-                                      ? 'bg-red-600 text-white'
-                                      : 'bg-gray-700/40 border border-white/10 text-white hover:bg-gray-700/60'
-                                  }`}
+                                  variant={attendance?.status === status ? 'primary' : 'secondary'}
+                                  size="sm"
                                 >
                                   {status}
-                                </button>
+                                </UiButton>
                               ))}
                             </div>
                           </div>
@@ -286,11 +286,10 @@ const TrainingSchedule = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Date & Time
                 </label>
-                <input
+                <UiCalendarInput
                   type="datetime-local"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
                   required
                 />
               </div>
@@ -302,7 +301,7 @@ const TrainingSchedule = () => {
                 <textarea
                   value={formData.drillDescription}
                   onChange={(e) => setFormData({ ...formData, drillDescription: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
+                  className="ui-textarea"
                   rows="3"
                   minLength="10"
                   maxLength="500"
@@ -318,7 +317,7 @@ const TrainingSchedule = () => {
                   type="number"
                   value={formData.duration}
                   onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
+                  className="ui-field"
                   min="30"
                   max="300"
                   required
@@ -326,23 +325,21 @@ const TrainingSchedule = () => {
               </div>
 
               <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded hover:bg-red-700"
-                >
+                <UiButton type="submit" variant="primary" className="flex-1">
                   Create
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
                     setFormData({ date: '', drillDescription: '', duration: 90 });
                     setError('');
                   }}
-                  className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>

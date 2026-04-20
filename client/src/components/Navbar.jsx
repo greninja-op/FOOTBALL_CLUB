@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSocket } from '../contexts/SocketContext'
+import UiButton from './ui/UiButton'
+import UiSelect from './ui/UiSelect'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -14,6 +16,9 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
   const [scrolled, setScrolled] = useState(false)
   const [showAccountMenu, setShowAccountMenu] = useState(false)
   const [density, setDensity] = useState(() => localStorage.getItem('uiDensity') || 'comfortable')
+  const menuShellRef = useRef(null)
+  const menuItemRefs = useRef({})
+  const [menuHighlight, setMenuHighlight] = useState({ left: 0, width: 0, opacity: 0 })
 
   // Fetch club settings on mount
   const fetchSettings = async () => {
@@ -89,11 +94,45 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
 
   const roleStyle = user?.role ? getRoleBadgeStyle(user.role) : {}
   const showMenu = menuItems && menuItems.length > 0
+  const activeMenuId = activeSection || menuItems?.[0]?.id
   const logoSrc = settings?.logoUrl
     ? settings.logoUrl.startsWith('http')
       ? settings.logoUrl
       : `${API_URL}${settings.logoUrl}`
     : null
+
+  const updateMenuHighlight = useCallback(() => {
+    if (!showMenu || !activeMenuId) {
+      setMenuHighlight((current) => ({ ...current, opacity: 0 }))
+      return
+    }
+
+    const shell = menuShellRef.current
+    const activeButton = menuItemRefs.current[activeMenuId]
+
+    if (!shell || !activeButton) {
+      setMenuHighlight((current) => ({ ...current, opacity: 0 }))
+      return
+    }
+
+    const shellRect = shell.getBoundingClientRect()
+    const buttonRect = activeButton.getBoundingClientRect()
+
+    setMenuHighlight({
+      left: buttonRect.left - shellRect.left,
+      width: buttonRect.width,
+      opacity: 1
+    })
+  }, [activeMenuId, showMenu])
+
+  useLayoutEffect(() => {
+    updateMenuHighlight()
+  }, [updateMenuHighlight])
+
+  useEffect(() => {
+    window.addEventListener('resize', updateMenuHighlight)
+    return () => window.removeEventListener('resize', updateMenuHighlight)
+  }, [updateMenuHighlight])
 
   return (
     <nav style={{
@@ -179,15 +218,24 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
           </div>
 
           {showMenu && (
-            <nav className="hidden items-center justify-center gap-10 md:flex">
+            <nav ref={menuShellRef} className="nav-menu-shell hidden items-center justify-center md:flex">
+              <span
+                className="nav-menu-highlight"
+                style={{
+                  transform: `translateX(${menuHighlight.left}px)`,
+                  width: menuHighlight.width,
+                  opacity: menuHighlight.opacity
+                }}
+              />
               {menuItems.map(item => (
                   <button
                     key={item.id}
+                    ref={(node) => {
+                      menuItemRefs.current[item.id] = node
+                    }}
                     onClick={() => onMenuClick && onMenuClick(item.id)}
-                    className="nav-menu-item"
+                    className={`nav-menu-item px-4 py-2 ${activeMenuId === item.id ? 'is-active' : ''}`}
                     style={{
-                      position: 'relative',
-                      padding: '0 0 10px',
                       fontSize: 10,
                       fontFamily: "'Bebas Neue', sans-serif",
                       letterSpacing: 4,
@@ -195,20 +243,10 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
                       cursor: 'pointer',
                       background: 'transparent',
                       border: 'none',
-                      whiteSpace: 'nowrap',
-                      color: 'white',
+                      whiteSpace: 'nowrap'
                     }}
                   >
                     {item.label}
-                    <span style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: 2,
-                      background: 'var(--color-primary)',
-                      display: 'block',
-                    }} className="nav-underline" />
                   </button>
                 ))}
             </nav>
@@ -220,7 +258,7 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
                 onClick={() => setShowAccountMenu((current) => !current)}
                 style={{
                   padding: '6px 16px',
-                  borderRadius: 100,
+                  borderRadius: 12,
                   fontSize: 10,
                   fontFamily: "'Bebas Neue', sans-serif",
                   letterSpacing: 4,
@@ -242,52 +280,40 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
                   UI Density
                 </label>
-                <select
+                <UiSelect
                   value={density}
                   onChange={(event) => handleDensityChange(event.target.value)}
-                  className="ui-select mb-3"
+                  className="mb-3"
                 >
                   <option value="comfortable">Comfortable</option>
                   <option value="compact">Compact</option>
-                </select>
+                </UiSelect>
                 <p className="text-xs leading-5 text-gray-500">
                   Password changes are handled by the admin user-management flow in this build.
                 </p>
-                <button
+                <UiButton
                   onClick={() => setShowAccountMenu(false)}
-                  className="mt-3 w-full rounded-full border border-white/15 bg-gray-700/40 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700/60"
+                  className="mt-3 w-full"
                 >
                   Close
-                </button>
+                </UiButton>
               </div>
             )}
 
-            <button
+            <UiButton
               onClick={handleLogout}
+              variant="primary"
+              size="md"
+              className="px-5"
               style={{
-                padding: '8px 20px',
                 fontSize: 13,
                 fontFamily: "'Bebas Neue', sans-serif",
                 letterSpacing: 3,
-                background: 'var(--color-primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: 2,
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                boxShadow: '0 4px 12px rgba(200,16,46,0.3)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(200,16,46,0.5)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = ''
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(200,16,46,0.3)'
+                textTransform: 'uppercase'
               }}
             >
               Logout
-            </button>
+            </UiButton>
           </div>
         </div>
       </div>

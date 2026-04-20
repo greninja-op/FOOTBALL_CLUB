@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
+import UiButton from './ui/UiButton';
+import UiCalendarInput from './ui/UiCalendarInput';
 
 const SystemLogs = () => {
   const [logs, setLogs] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [loginHistory, setLoginHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -16,11 +20,16 @@ const SystemLogs = () => {
 
   const fetchLogs = async () => {
     try {
-      setLoading(true);
+      if (initialFetchDone) {
+        setPageLoading(true);
+      } else {
+        setLoading(true);
+      }
+
       const token = localStorage.getItem('authToken');
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20',
+        limit: '5',
       });
 
       if (startDate) params.append('startDate', startDate);
@@ -44,6 +53,8 @@ const SystemLogs = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+      setPageLoading(false);
+      setInitialFetchDone(true);
     }
   };
 
@@ -124,13 +135,14 @@ const SystemLogs = () => {
             <p className="text-xs uppercase tracking-[0.35em] text-white/45">Monitoring</p>
             <p className="mt-1 text-sm text-gray-400">View who is online, recent logins, and the full audit trail.</p>
           </div>
-          <button
+          <UiButton
             onClick={exportLogsCsv}
             disabled={logs.length === 0}
-            className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/60 disabled:opacity-50"
+            variant="secondary"
+            className="px-4"
           >
             Export CSV
-          </button>
+          </UiButton>
         </div>
       </div>
 
@@ -203,47 +215,54 @@ const SystemLogs = () => {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[200px] flex-1">
             <label className="mb-1 block text-sm font-medium text-gray-300">Start Date</label>
-            <input
-              type="date"
+            <UiCalendarInput
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
                 setPage(1);
               }}
-              className="ui-field"
             />
           </div>
           <div className="min-w-[200px] flex-1">
             <label className="mb-1 block text-sm font-medium text-gray-300">End Date</label>
-            <input
-              type="date"
+            <UiCalendarInput
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
                 setPage(1);
               }}
-              className="ui-field"
             />
           </div>
-          <button
+          <UiButton
             onClick={handleResetFilters}
-            className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-gray-200 transition hover:bg-gray-700/60"
+            variant="secondary"
+            className="px-4"
           >
             Reset Filters
-          </button>
+          </UiButton>
         </div>
       </div>
 
       {loading ? (
         <div className="py-8 text-center text-white">Loading logs...</div>
-      ) : error ? (
-        <div className="py-4 text-red-400">{error}</div>
-      ) : logs.length === 0 ? (
+      ) : logs.length === 0 && !error ? (
         <div className="py-8 text-center text-gray-400">No logs found</div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gray-800/30">
-            <table className="min-w-full">
+          {error && (
+            <div className="mb-3 rounded-xl border border-red-500/30 bg-red-900/25 px-4 py-2 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gray-800/30">
+            {pageLoading && (
+              <div className="absolute inset-x-0 top-0 z-10 border-b border-white/10 bg-gray-900/80 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/70">
+                Updating page...
+              </div>
+            )}
+
+            <table className={`min-w-full transition-opacity ${pageLoading ? 'opacity-65' : 'opacity-100'}`}>
               <thead className="bg-gray-900/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-300">Timestamp</th>
@@ -283,21 +302,21 @@ const SystemLogs = () => {
           </div>
 
           <div className="mt-4 flex justify-center gap-2">
-            <button
+            <UiButton
               onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={page === 1}
-              className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:bg-gray-700/40 disabled:opacity-50"
+              disabled={page === 1 || pageLoading}
+              variant="secondary"
             >
               Previous
-            </button>
+            </UiButton>
             <span className="px-4 py-2 text-white">Page {page} of {totalPages}</span>
-            <button
+            <UiButton
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              disabled={page === totalPages}
-              className="rounded-full border border-white/20 px-4 py-2 text-white transition hover:bg-gray-700/40 disabled:opacity-50"
+              disabled={page === totalPages || pageLoading}
+              variant="secondary"
             >
               Next
-            </button>
+            </UiButton>
           </div>
         </>
       )}

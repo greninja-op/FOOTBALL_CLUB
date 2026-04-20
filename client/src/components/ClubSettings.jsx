@@ -189,8 +189,8 @@ const ClubSettings = () => {
 
   // Handle file selection
   const handleFileSelect = (file) => {
-    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-      setErrors({ logo: 'Only JPEG and PNG files are allowed' });
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErrors({ logo: 'Only JPEG, PNG, and WebP files are allowed' });
       return;
     }
 
@@ -250,12 +250,17 @@ const ClubSettings = () => {
         body: formData
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to upload logo');
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to upload logo');
+      }
+
       const uploadedLogoUrl = data.logoUrl ? `${data.logoUrl}?v=${Date.now()}` : data.logoUrl;
       setSettings(prev => ({ ...prev, logoUrl: uploadedLogoUrl }));
       setLogoFile(null);
@@ -499,9 +504,9 @@ const ClubSettings = () => {
               <p className="text-xs text-gray-300 mb-1">Drop logo here, or</p>
               <label className="cursor-pointer text-red-400 hover:text-red-300 text-xs">
                 <span>browse files</span>
-                <input type="file" className="hidden" accept="image/jpeg,image/jpg,image/png" onChange={handleFileChange} />
+                <input type="file" className="hidden" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleFileChange} />
               </label>
-              <p className="text-xs text-gray-500 mt-1">JPEG or PNG, max 5MB</p>
+              <p className="text-xs text-gray-500 mt-1">JPEG, PNG, or WebP, max 5MB</p>
             </div>
 
             {errors.logo && <p className="text-red-400 text-sm mt-2">{errors.logo}</p>}

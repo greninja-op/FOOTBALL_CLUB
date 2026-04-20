@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
+import UiButton from './ui/UiButton';
+import UiSelect from './ui/UiSelect';
+import UiCalendarInput from './ui/UiCalendarInput';
 
 const getDisplayPosition = (player) => (
   player.playerDomain?.activeMembership?.primaryPosition
@@ -13,7 +16,7 @@ const DisciplinaryPanel = () => {
   const { token } = useAuth();
   const [players, setPlayers] = useState([]);
   const [actions, setActions] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [showFineForm, setShowFineForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -91,7 +94,7 @@ const DisciplinaryPanel = () => {
       
       if (data.success) {
         setSuccess('Fine logged successfully');
-        setShowModal(false);
+        setShowFineForm(false);
         setFineForm({
           playerId: '',
           offense: '',
@@ -117,12 +120,95 @@ const DisciplinaryPanel = () => {
       <FloatingNotice message={error || success} type={error ? 'error' : 'success'} />
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Disciplinary Actions</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 text-sm"
+        <UiButton
+          onClick={() => setShowFineForm((current) => !current)}
+          variant={showFineForm ? 'secondary' : 'primary'}
         >
-          Log Fine
-        </button>
+          {showFineForm ? 'Close Form' : 'Log Fine'}
+        </UiButton>
+      </div>
+
+      <div className="ui-inline-expand mb-4" data-open={showFineForm}>
+        <div className="ui-expand-card p-4">
+          <h3 className="mb-3 text-lg font-semibold text-white">Log Fine</h3>
+          <form onSubmit={handleLogFine}>
+            <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">Player *</label>
+                <UiSelect
+                  value={fineForm.playerId}
+                  onChange={(event) => setFineForm({ ...fineForm, playerId: event.target.value })}
+                  required
+                >
+                  <option value="">Select a player</option>
+                  {players.map((player) => (
+                    <option key={player._id} value={player._id}>
+                      {player.fullName} - {getDisplayPosition(player)}
+                    </option>
+                  ))}
+                </UiSelect>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">Date Issued</label>
+                <UiCalendarInput
+                  value={fineForm.dateIssued}
+                  onChange={(event) => setFineForm({ ...fineForm, dateIssued: event.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-[1.3fr_0.7fr]">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">Offense *</label>
+                <input
+                  type="text"
+                  value={fineForm.offense}
+                  onChange={(event) => setFineForm({ ...fineForm, offense: event.target.value })}
+                  className="ui-field"
+                  placeholder="Late to training"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-300">Fine Amount ($) *</label>
+                <input
+                  type="number"
+                  value={fineForm.fineAmount}
+                  onChange={(event) => setFineForm({ ...fineForm, fineAmount: event.target.value })}
+                  className="ui-field"
+                  placeholder="0 - 100000"
+                  min="0"
+                  max="100000"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <UiButton
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setShowFineForm(false);
+                  setFineForm({
+                    playerId: '',
+                    offense: '',
+                    fineAmount: '',
+                    dateIssued: new Date().toISOString().split('T')[0]
+                  });
+                  setError('');
+                }}
+              >
+                Cancel
+              </UiButton>
+              <UiButton type="submit" variant="primary">
+                Save Fine
+              </UiButton>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Action History Table */}
@@ -172,101 +258,6 @@ const DisciplinaryPanel = () => {
         )}
       </div>
 
-      {/* Log Fine Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg p-4 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-white">Log Fine</h3>
-            <form onSubmit={handleLogFine}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Player *
-                </label>
-                <select
-                  value={fineForm.playerId}
-                  onChange={(e) => setFineForm({ ...fineForm, playerId: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
-                  required
-                >
-                  <option value="">Select a player</option>
-                  {players.map(player => (
-                  <option key={player._id} value={player._id}>
-                      {player.fullName} - {getDisplayPosition(player)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Offense *
-                </label>
-                <input
-                  type="text"
-                  value={fineForm.offense}
-                  onChange={(e) => setFineForm({ ...fineForm, offense: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
-                  placeholder="e.g., Late to training"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Fine Amount ($) *
-                </label>
-                <input
-                  type="number"
-                  value={fineForm.fineAmount}
-                  onChange={(e) => setFineForm({ ...fineForm, fineAmount: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md placeholder-gray-500"
-                  placeholder="0 - 100,000"
-                  min="0"
-                  max="100000"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Date Issued
-                </label>
-                <input
-                  type="date"
-                  value={fineForm.dateIssued}
-                  onChange={(e) => setFineForm({ ...fineForm, dateIssued: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800/40 border border-white/20 text-white rounded-md"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded hover:bg-red-700"
-                >
-                  Log Fine
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setFineForm({
-                      playerId: '',
-                      offense: '',
-                      fineAmount: '',
-                      dateIssued: new Date().toISOString().split('T')[0]
-                    });
-                    setError('');
-                  }}
-                  className="flex-1 bg-gray-700/40 border border-white/10 text-white py-2 px-3 rounded hover:bg-gray-700/60"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
