@@ -462,7 +462,12 @@ html[data-density='compact'] .ui-select {
   padding-right: 2.75rem;
 }
 
-.ui-calendar-input {
+/* NOTE: selectors are prefixed with `.ui-field` to boost specificity above the
+   `input[type="date"]` / `input[type="datetime-local"]` base rules further
+   down in this file (which have (0,1,1) specificity from element+attribute).
+   Without this boost, background-image and padding-right on
+   .ui-calendar-input get overridden by those base rules. */
+.ui-field.ui-calendar-input {
   padding-right: 2.8rem;
   background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-opacity='0.55' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='5' width='18' height='16' rx='3'/><line x1='3' y1='10' x2='21' y2='10'/><line x1='8' y1='3' x2='8' y2='7'/><line x1='16' y1='3' x2='16' y2='7'/><circle cx='8.5' cy='14.5' r='1' fill='%23ffffff' fill-opacity='0.55' stroke='none'/><circle cx='12' cy='14.5' r='1' fill='%23ffffff' fill-opacity='0.55' stroke='none'/><circle cx='15.5' cy='14.5' r='1' fill='%23ffffff' fill-opacity='0.55' stroke='none'/></svg>");
@@ -471,7 +476,7 @@ html[data-density='compact'] .ui-select {
   background-size: 1.1rem 1.1rem;
 }
 
-.ui-calendar-input::-webkit-calendar-picker-indicator {
+.ui-field.ui-calendar-input::-webkit-calendar-picker-indicator {
   opacity: 0;
   cursor: pointer;
   width: 2.6rem;
@@ -480,7 +485,7 @@ html[data-density='compact'] .ui-select {
   right: 0;
 }
 
-.ui-calendar-input:hover {
+.ui-field.ui-calendar-input:hover {
   border-color: rgba(200,16,46,0.35);
 }
 
