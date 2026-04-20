@@ -416,7 +416,7 @@ const InlineUploadPanel = ({ player, onCancel, onSuccess, onError }) => {
 
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor={inputId}>
-            <span className="ui-btn ui-btn-secondary ui-btn-md cursor-pointer px-4">Choose File</span>
+            <span className="ui-btn ui-btn-ghost ui-btn-md cursor-pointer px-4">Choose File</span>
           </label>
           <span className="text-sm text-gray-300">{file ? file.name : 'No file selected'}</span>
         </div>

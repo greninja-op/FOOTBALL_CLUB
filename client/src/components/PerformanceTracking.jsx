@@ -155,7 +155,7 @@ const PerformanceTracking = () => {
         {/* Player List */}
         <div className="bg-gray-800/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
           <h3 className="font-semibold mb-3 text-white text-sm">Select Player</h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="space-y-2 max-h-96 overflow-y-auto no-scrollbar pr-1">
             {players.map(player => (
               <button
                 key={player._id}

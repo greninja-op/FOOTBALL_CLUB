@@ -1,5 +1,3 @@
-import React from 'react';
-
 const UiCalendarInput = ({ type = 'date', className = '', ...props }) => (
   <input
     type={type}

@@ -73,7 +73,11 @@ const PageTransition = ({ children }) => {
       clearTimeout(openTimer);
       clearTimeout(idleTimer);
     };
-  }, [location.pathname, children]);
+    // Intentionally only depend on pathname — depending on `children` here would
+    // incorrectly re-trigger the walls animation whenever a child state update
+    // (e.g., pagination within System Logs or User Management) creates a new
+    // children reference, producing the "home page briefly flashes" bug.
+  }, [location.pathname]);
 
   useEffect(() => {
     if (phase === 'idle') {
