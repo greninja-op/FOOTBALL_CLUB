@@ -19,10 +19,14 @@ const FixtureSchema = new mongoose.Schema({
     required: [true, 'Fixture date is required'],
     validate: {
       validator: function(v) {
-        // Validate that fixture date is not in the past
-        // Allow dates from today onwards
+        // Completed fixtures may exist in the past for reporting and simulation.
+        if (this.status === 'completed') {
+          return true;
+        }
+
+        // Scheduled fixtures must be today or later.
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
+        today.setHours(0, 0, 0, 0);
         return v >= today;
       },
       message: 'Fixture date cannot be in the past'
@@ -40,6 +44,56 @@ const FixtureSchema = new mongoose.Schema({
       message: '{VALUE} is not a valid match type. Must be one of: League, Cup, Friendly, Tournament'
     },
     default: 'League'
+  },
+  status: {
+    type: String,
+    enum: {
+      values: ['scheduled', 'completed', 'cancelled'],
+      message: '{VALUE} is not a valid fixture status'
+    },
+    default: 'scheduled'
+  },
+  opponentRank: {
+    type: Number,
+    default: null,
+    min: [1, 'Opponent rank must be at least 1'],
+    max: [20, 'Opponent rank cannot exceed 20']
+  },
+  homeScore: {
+    type: Number,
+    default: null,
+    min: [0, 'Home score cannot be negative']
+  },
+  awayScore: {
+    type: Number,
+    default: null,
+    min: [0, 'Away score cannot be negative']
+  },
+  matchdaySimulated: {
+    type: Boolean,
+    default: false
+  },
+  matchdayRevenue: {
+    type: Number,
+    default: 0,
+    min: [0, 'Matchday revenue cannot be negative']
+  },
+  matchdayAttendance: {
+    type: Number,
+    default: 0,
+    min: [0, 'Matchday attendance cannot be negative']
+  },
+  ticketPricing: {
+    generalAdmission: {
+      type: Number,
+      default: 0,
+      min: [0, 'General admission price cannot be negative']
+    },
+    vipHospitality: {
+      type: Number,
+      default: 0,
+      min: [0, 'VIP hospitality price cannot be negative']
+    }
   },
   lineup: [{
     type: mongoose.Schema.Types.ObjectId,

@@ -11,7 +11,6 @@ const SystemLogs = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showAllOnline, setShowAllOnline] = useState(false);
-  const [showAllLogins, setShowAllLogins] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -109,7 +108,13 @@ const SystemLogs = () => {
   };
 
   const visibleOnlineUsers = showAllOnline ? onlineUsers : onlineUsers.slice(0, 5);
-  const visibleLoginHistory = showAllLogins ? loginHistory : loginHistory.slice(0, 5);
+  const todayLoginHistory = loginHistory.filter((entry) => {
+    const entryDate = new Date(entry.timestamp);
+    const today = new Date();
+    return entryDate.toDateString() === today.toDateString();
+  });
+  const visibleLoginHistory = todayLoginHistory.slice(0, 5);
+  const overflowLoginHistory = todayLoginHistory.slice(5);
 
   return (
     <div className="p-4">
@@ -164,12 +169,12 @@ const SystemLogs = () => {
         <div className="rounded-2xl border border-white/10 bg-gray-800/30 p-4" style={{ maxHeight: 340, display: 'flex', flexDirection: 'column' }}>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white">Recent Login History</h3>
-            <span className="text-xs uppercase tracking-[0.25em] text-white/45">Latest {loginHistory.length}</span>
+            <span className="text-xs uppercase tracking-[0.25em] text-white/45">Today {todayLoginHistory.length}</span>
           </div>
-          {loginHistory.length === 0 ? (
-            <p className="text-sm text-gray-500">No login events recorded yet.</p>
+          {todayLoginHistory.length === 0 ? (
+            <p className="text-sm text-gray-500">No login events recorded today.</p>
           ) : (
-            <div className="space-y-2 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+            <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar" style={{ minHeight: 0 }}>
               {visibleLoginHistory.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-gray-700/20 px-3 py-2">
                   <div>
@@ -179,14 +184,15 @@ const SystemLogs = () => {
                   <div className="text-xs text-gray-400">{formatTimestamp(entry.timestamp)}</div>
                 </div>
               ))}
-              {loginHistory.length > 5 && (
-                <button
-                  onClick={() => setShowAllLogins(!showAllLogins)}
-                  className="w-full text-center text-xs text-red-400 hover:text-red-300 py-1 transition-colors"
-                >
-                  {showAllLogins ? 'Show Less' : `Show All (${loginHistory.length})`}
-                </button>
-              )}
+              {overflowLoginHistory.map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-gray-700/10 px-3 py-2">
+                  <div>
+                    <div className="text-sm font-medium text-white">{entry.performedBy?.email || 'Unknown user'}</div>
+                    <div className="text-xs uppercase tracking-[0.25em] text-gray-500">{entry.performedBy?.role || 'unknown'}</div>
+                  </div>
+                  <div className="text-xs text-gray-400">{formatTimestamp(entry.timestamp)}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingNotice from './FloatingNotice';
 
@@ -48,6 +49,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const TacticalBoard = () => {
   const { token } = useAuth();
+  const rosterPrintRef = useRef(null);
   const [players, setPlayers] = useState([]);
   const [unavailablePlayers, setUnavailablePlayers] = useState([]);
   const [fixtures, setFixtures] = useState([]);
@@ -61,6 +63,8 @@ const TacticalBoard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const clubName = import.meta.env.VITE_CLUB_NAME || 'Football Club';
 
   const slots = useMemo(() => FORMATIONS[formation], [formation]);
 
@@ -170,6 +174,39 @@ const TacticalBoard = () => {
   }, [lineupMap, bench]);
 
   const availableBenchPool = players.filter((player) => !allSelectedIds.has(player.id || player._id));
+
+  const officialStarters = useMemo(() => (
+    slots
+      .map((slot) => ({
+        slotLabel: slot.label,
+        player: lineupMap[slot.id]
+      }))
+      .filter((entry) => Boolean(entry.player))
+  ), [slots, lineupMap]);
+
+  const officialBench = useMemo(() => bench.slice(0, 7), [bench]);
+
+  const selectedFixtureDetails = useMemo(() => (
+    fixtures.find((fixture) => String(fixture.id || fixture._id) === String(selectedFixture)) || null
+  ), [fixtures, selectedFixture]);
+
+  const handlePrintOfficialRoster = useReactToPrint({
+    content: () => rosterPrintRef.current,
+    documentTitle: `official_roster_${new Date().toISOString().slice(0, 10)}`,
+    pageStyle: `
+      @page {
+        size: A4 portrait;
+        margin: 14mm;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: #000000;
+      }
+    `
+  });
 
   useEffect(() => {
     fetchFixtureHistory(selectedFixture);
@@ -302,7 +339,7 @@ const TacticalBoard = () => {
       const match = sortedPlayers.find((player) => {
         const playerId = player.id || player._id;
         if (usedIds.has(playerId)) return false;
-        const tags = [player.preferredPosition, ...(player.secondaryPositions || []), player.position].filter(Boolean);
+        const tags = getPlayerPositionTags(player);
         return tags.some((tag) => slot.accepts.includes(tag));
       }) || sortedPlayers.find((player) => !usedIds.has(player.id || player._id));
 
@@ -430,12 +467,20 @@ const TacticalBoard = () => {
             Build a slot-based lineup, swap players between positions, and keep the bench organized.
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/60"
-        >
-          Print Pitch
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={handlePrintOfficialRoster}
+            className="rounded-full border border-emerald-500/30 bg-emerald-700/40 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-700/60"
+          >
+            Print Official Roster
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-full border border-white/15 bg-gray-700/40 px-4 py-2 text-sm text-gray-200 transition hover:bg-gray-700/60"
+          >
+            Print Pitch
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
@@ -517,11 +562,11 @@ const TacticalBoard = () => {
       <div className="grid gap-4 xl:grid-cols-[0.9fr_1.2fr_0.9fr]">
         <aside>
           <h3 className="mb-3 text-lg font-semibold text-white">Available Players</h3>
-          <div className="min-h-96 rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
+          <div className="rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
             <div
               onDragOver={(event) => event.preventDefault()}
               onDrop={dropBackToPool}
-              className="min-h-80 rounded-2xl border border-dashed border-white/10 p-2"
+              className="grid max-h-[31rem] min-h-[24rem] grid-cols-1 gap-2 overflow-y-auto rounded-2xl border border-dashed border-white/10 p-2 pr-1 custom-scrollbar sm:grid-cols-2"
             >
               {availableBenchPool.map((player) => (
                 <PlayerToken
@@ -674,7 +719,7 @@ const TacticalBoard = () => {
 
           <h3 className="mb-3 mt-6 text-lg font-semibold text-white">Manual Availability Controls</h3>
           <div className="rounded-lg bg-gray-800/40 backdrop-blur-sm border border-white/10 p-4">
-            <div className="space-y-3">
+            <div className="grid max-h-[31rem] grid-cols-1 gap-3 overflow-y-auto pr-1 custom-scrollbar sm:grid-cols-2">
               {players.slice(0, 6).map((player) => (
                 <div key={`manual-${player.id}`} className="rounded-lg bg-gray-700/20 border border-white/10 p-3">
                   <div className="font-medium text-white">{player.fullName}</div>
@@ -705,8 +750,112 @@ const TacticalBoard = () => {
           </div>
         </aside>
       </div>
+
+      <div style={{ position: 'absolute', left: '-99999px', top: 0 }} aria-hidden="true">
+        <div
+          ref={rosterPrintRef}
+          style={{
+            width: '100%',
+            minHeight: '100vh',
+            backgroundColor: '#ffffff',
+            color: '#000000',
+            fontFamily: 'Arial, sans-serif',
+            padding: '20px'
+          }}
+        >
+          <h1 style={{ margin: 0, fontSize: '24px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            {clubName}
+          </h1>
+          <h2 style={{ marginTop: '8px', fontSize: '18px', fontWeight: 700 }}>
+            Official Matchday Roster
+          </h2>
+          <p style={{ marginTop: '4px', fontSize: '12px' }}>
+            Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+          <p style={{ marginTop: '2px', fontSize: '12px' }}>
+            Fixture: {selectedFixtureDetails ? `vs ${selectedFixtureDetails.opponent}` : 'Not selected'}
+          </p>
+          <p style={{ marginTop: '2px', fontSize: '12px' }}>Formation: {formation}</p>
+
+          <div style={{ marginTop: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', textTransform: 'uppercase' }}>Starting XI</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+              <thead>
+                <tr>
+                  <th style={printTableHeaderStyle}>#</th>
+                  <th style={printTableHeaderStyle}>Position</th>
+                  <th style={printTableHeaderStyle}>Player</th>
+                </tr>
+              </thead>
+              <tbody>
+                {officialStarters.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={printEmptyCellStyle}>No starters selected</td>
+                  </tr>
+                ) : (
+                  officialStarters.map((entry, index) => (
+                    <tr key={`starter-${entry.slotLabel}-${entry.player?.id || entry.player?._id || index}`}>
+                      <td style={printTableCellStyle}>{index + 1}</td>
+                      <td style={printTableCellStyle}>{entry.slotLabel}</td>
+                      <td style={printTableCellStyle}>{entry.player?.fullName || 'Unknown'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ marginTop: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', textTransform: 'uppercase' }}>Bench</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+              <thead>
+                <tr>
+                  <th style={printTableHeaderStyle}>#</th>
+                  <th style={printTableHeaderStyle}>Player</th>
+                  <th style={printTableHeaderStyle}>Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {officialBench.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={printEmptyCellStyle}>No bench players selected</td>
+                  </tr>
+                ) : (
+                  officialBench.map((player, index) => (
+                    <tr key={`bench-${player?.id || player?._id || index}`}>
+                      <td style={printTableCellStyle}>{index + 1}</td>
+                      <td style={printTableCellStyle}>{player?.fullName || 'Unknown'}</td>
+                      <td style={printTableCellStyle}>{player?.preferredPosition || player?.position || 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
+};
+
+const printTableHeaderStyle = {
+  textAlign: 'left',
+  borderBottom: '1px solid #000000',
+  padding: '8px 4px',
+  fontSize: '12px'
+};
+
+const printTableCellStyle = {
+  borderBottom: '1px solid #d1d5db',
+  padding: '8px 4px',
+  fontSize: '12px'
+};
+
+const printEmptyCellStyle = {
+  borderBottom: '1px solid #d1d5db',
+  padding: '12px 4px',
+  fontSize: '12px',
+  color: '#4b5563'
 };
 
 const PlayerToken = ({ player, onDragStart, compact = false }) => (
@@ -716,7 +865,7 @@ const PlayerToken = ({ player, onDragStart, compact = false }) => (
     className={`cursor-move rounded-lg bg-gray-700/40 border border-white/10 shadow transition hover:shadow-md hover:bg-gray-700/60 ${compact ? 'flex-1 p-2' : 'mb-2 p-3'}`}
   >
     <div className="font-medium text-white">{player.fullName}</div>
-    <div className="text-sm text-gray-400">{player.preferredPosition || player.position}</div>
+    <div className="text-sm text-gray-400">{player.preferredPosition || player.position || 'Position not set'}</div>
     <div className="mt-1 inline-flex rounded-full bg-gray-800/60 border border-white/20 px-2 py-1 text-[11px] font-semibold text-gray-300">
       Rating {Number(player.stats?.rating || 0).toFixed(1)}
     </div>
@@ -724,8 +873,24 @@ const PlayerToken = ({ player, onDragStart, compact = false }) => (
 );
 
 function playerFitsSlot(player, slot) {
-  const tags = [player.preferredPosition, ...(player.secondaryPositions || []), player.position].filter(Boolean);
+  const tags = getPlayerPositionTags(player);
   return tags.some((tag) => slot.accepts.includes(tag));
+}
+
+function getPlayerPositionTags(player) {
+  const broadPositionMap = {
+    Goalkeeper: ['GK'],
+    Defender: ['CB', 'LB', 'RB', 'LWB', 'RWB'],
+    Midfielder: ['DM', 'CM', 'AM', 'CAM', 'LM', 'RM'],
+    Forward: ['LW', 'RW', 'CF', 'ST', 'SS'],
+    Staff: ['STAFF']
+  };
+
+  return [
+    player.preferredPosition,
+    ...(player.secondaryPositions || []),
+    ...(broadPositionMap[player.position] || [player.position])
+  ].filter(Boolean);
 }
 
 export default TacticalBoard;

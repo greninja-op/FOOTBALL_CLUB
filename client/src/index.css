@@ -822,3 +822,28 @@ table {
   border-radius: 1.25rem;
   overflow: hidden;
 }
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 16, 46, 0.65) rgba(255,255,255,0.06);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(200,16,46,0.75), rgba(212,175,55,0.55));
+  border-radius: 999px;
+  border: 2px solid rgba(10,10,24,0.9);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(200,16,46,0.9);
+}

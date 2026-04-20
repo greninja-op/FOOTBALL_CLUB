@@ -25,10 +25,20 @@ const listArchivedPlayers = async (req, res) => {
       .populate('archivedBy', 'email role')
       .sort({ archivedAt: -1 });
 
+    const activeMemberships = await ClubMembership.find({
+      playerId: { $in: archivedPlayers.map((entry) => entry.playerId?._id || entry.playerId).filter(Boolean) },
+      isActive: true
+    }).select('playerId');
+    const activePlayerIds = new Set(activeMemberships.map((membership) => String(membership.playerId)));
+    const inactiveArchiveEntries = archivedPlayers.filter((entry) => {
+      const playerId = entry.playerId?._id || entry.playerId;
+      return playerId && !activePlayerIds.has(String(playerId));
+    });
+
     res.status(200).json({
       success: true,
-      count: archivedPlayers.length,
-      archivedPlayers: archivedPlayers.map((entry) => ({
+      count: inactiveArchiveEntries.length,
+      archivedPlayers: inactiveArchiveEntries.map((entry) => ({
         id: entry._id,
         playerId: entry.playerId?._id || null,
         fullName: entry.snapshot.fullName,

@@ -123,6 +123,12 @@ const ProfileSchema = new mongoose.Schema({
     min: [150, 'Height must be at least 150 cm'],
     max: [220, 'Height cannot exceed 220 cm']
   },
+  jerseyNumber: {
+    type: Number,
+    default: null,
+    min: [1, 'Jersey number must be at least 1'],
+    max: [99, 'Jersey number cannot exceed 99']
+  },
   fitnessStatus: {
     type: String,
     enum: {
@@ -138,6 +144,27 @@ const ProfileSchema = new mongoose.Schema({
       message: '{VALUE} is not a valid contract type. Must be one of: Full-Time, Part-Time, Loan, Trial'
     },
     default: 'Full-Time'
+  },
+  weeklySalary: {
+    type: Number,
+    default: 0,
+    min: [0, 'Weekly salary cannot be negative']
+  },
+  transferFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Transfer fee cannot be negative']
+  },
+  contractLengthYears: {
+    type: Number,
+    default: 1,
+    min: [0, 'Contract length years cannot be negative']
+  },
+  marketabilityScore: {
+    type: Number,
+    default: 50,
+    min: [1, 'Marketability score must be at least 1'],
+    max: [100, 'Marketability score cannot exceed 100']
   },
   contractStart: {
     type: Date,

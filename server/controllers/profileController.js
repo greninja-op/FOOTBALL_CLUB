@@ -167,7 +167,21 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.params.userId || req.user.id;
-    const { fullName, photo, position, weight, height, contractType, contractStart, contractEnd } = req.body;
+    const {
+      fullName,
+      photo,
+      position,
+      weight,
+      height,
+      jerseyNumber,
+      contractType,
+      contractStart,
+      contractEnd,
+      weeklySalary,
+      transferFee,
+      contractLengthYears,
+      marketabilityScore
+    } = req.body;
 
     // Find profile
     const profile = await Profile.findOne({ userId });
@@ -221,6 +235,17 @@ const updateProfile = async (req, res) => {
       profile.height = height;
     }
 
+    if (jerseyNumber !== undefined) {
+      if (jerseyNumber !== null && (Number(jerseyNumber) < 1 || Number(jerseyNumber) > 99)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Jersey number must be between 1 and 99'
+        });
+      }
+      changes.jerseyNumber = { from: profile.jerseyNumber || null, to: jerseyNumber };
+      profile.jerseyNumber = jerseyNumber;
+    }
+
     if (contractType !== undefined) {
       changes.contractType = { from: profile.contractType, to: contractType };
       profile.contractType = contractType;
@@ -234,6 +259,54 @@ const updateProfile = async (req, res) => {
     if (contractEnd !== undefined) {
       changes.contractEnd = { from: profile.contractEnd, to: contractEnd };
       profile.contractEnd = contractEnd;
+    }
+
+    if (weeklySalary !== undefined) {
+      if (Number(weeklySalary) < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Weekly salary cannot be negative'
+        });
+      }
+      changes.weeklySalary = { from: profile.weeklySalary || 0, to: Number(weeklySalary) };
+      profile.weeklySalary = Number(weeklySalary);
+    }
+
+    if (transferFee !== undefined) {
+      if (Number(transferFee) < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Transfer fee cannot be negative'
+        });
+      }
+      changes.transferFee = { from: profile.transferFee || 0, to: Number(transferFee) };
+      profile.transferFee = Number(transferFee);
+    }
+
+    if (contractLengthYears !== undefined) {
+      if (Number(contractLengthYears) < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Contract length years cannot be negative'
+        });
+      }
+      changes.contractLengthYears = {
+        from: profile.contractLengthYears || 1,
+        to: Number(contractLengthYears)
+      };
+      profile.contractLengthYears = Number(contractLengthYears);
+    }
+
+    if (marketabilityScore !== undefined) {
+      const score = Number(marketabilityScore);
+      if (score < 1 || score > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Marketability score must be between 1 and 100'
+        });
+      }
+      changes.marketabilityScore = { from: profile.marketabilityScore || 50, to: score };
+      profile.marketabilityScore = score;
     }
 
     await profile.save();

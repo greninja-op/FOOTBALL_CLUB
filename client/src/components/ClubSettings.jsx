@@ -256,7 +256,8 @@ const ClubSettings = () => {
       }
 
       const data = await response.json();
-      setSettings(prev => ({ ...prev, logoUrl: data.logoUrl }));
+      const uploadedLogoUrl = data.logoUrl ? `${data.logoUrl}?v=${Date.now()}` : data.logoUrl;
+      setSettings(prev => ({ ...prev, logoUrl: uploadedLogoUrl }));
       setLogoFile(null);
       setLogoPreview(null);
       showToast('Logo uploaded successfully');

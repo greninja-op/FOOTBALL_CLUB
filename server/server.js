@@ -77,6 +77,7 @@ const injuryRoutes = require('./routes/injuryRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const playerDomainRoutes = require('./routes/playerDomainRoutes');
 const publicRoutes = require('./routes/publicRoutes');
+const financeRoutes = require('./routes/financeRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -93,6 +94,7 @@ app.use('/api/injuries', injuryRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/player-domain', playerDomainRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/finance', financeRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {
