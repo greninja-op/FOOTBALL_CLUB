@@ -15,6 +15,7 @@ const UserManagement = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [toast, setToast] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch users
   const fetchUsers = async () => {
@@ -86,6 +87,18 @@ const UserManagement = () => {
     }
   };
 
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const filteredUsers = normalizedSearchTerm
+    ? users.filter((user) => {
+        const fullName = user.profile?.fullName || '';
+        return (
+          user.email?.toLowerCase().includes(normalizedSearchTerm)
+          || user.role?.toLowerCase().includes(normalizedSearchTerm)
+          || fullName.toLowerCase().includes(normalizedSearchTerm)
+        );
+      })
+    : users;
+
   return (
     <div className="p-4 transition-all duration-300">
       <FloatingNotice message={toast?.message} type={toast?.type} />
@@ -95,13 +108,24 @@ const UserManagement = () => {
           <p className="text-xs uppercase tracking-[0.35em] text-white/45">System Access</p>
           <p className="mt-1 text-sm text-gray-400">Manage system users and roles</p>
         </div>
-        <UiButton
-          onClick={() => setShowCreateForm((current) => !current)}
-          variant="primary"
-          className="px-4"
-        >
-          {showCreateForm ? 'Close Form' : 'Create User'}
-        </UiButton>
+        <div className="flex items-center gap-3">
+          <div className="w-full min-w-[15rem] max-w-[18rem]">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="ui-field"
+              placeholder="Search by name, email, or role"
+            />
+          </div>
+          <UiButton
+            onClick={() => setShowCreateForm((current) => !current)}
+            variant="primary"
+            className="px-4"
+          >
+            {showCreateForm ? 'Close Form' : 'Create User'}
+          </UiButton>
+        </div>
       </div>
 
       <div className="ui-inline-expand mb-4" data-open={showCreateForm}>
@@ -155,7 +179,14 @@ const UserManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {users.map((user) => (
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-sm text-gray-400">
+                      No users match your search.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-300">{user.email}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
@@ -192,7 +223,8 @@ const UserManagement = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

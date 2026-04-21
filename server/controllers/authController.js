@@ -4,6 +4,9 @@ const validator = require('validator');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const normalizeWhitespace = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+
 /**
  * Authentication Controller
  * Handles user authentication operations
@@ -31,20 +34,40 @@ const login = async (identifier, password) => {
     }
 
     let user = null;
-    const normalizedIdentifier = identifier.toLowerCase().trim();
+    let passwordAlreadyValidated = false;
+    const normalizedIdentifier = normalizeWhitespace(identifier);
+    const normalizedEmailIdentifier = normalizedIdentifier.toLowerCase();
 
     // Try to find by email first
-    if (validator.isEmail(normalizedIdentifier)) {
-      user = await User.findOne({ email: normalizedIdentifier }).select('+passwordHash');
+    if (validator.isEmail(normalizedEmailIdentifier)) {
+      user = await User.findOne({ email: normalizedEmailIdentifier }).select('+passwordHash');
     }
 
-    // If not found by email, try to find by fullName (case-insensitive)
+    // If not found by email, try to find by fullName (case-insensitive with flexible spacing)
     if (!user) {
-      const profile = await Profile.findOne({
-        fullName: { $regex: new RegExp(`^${normalizedIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-      });
-      if (profile) {
-        user = await User.findById(profile.userId).select('+passwordHash');
+      const normalizedNameIdentifier = normalizedEmailIdentifier;
+      const namePattern = normalizedNameIdentifier
+        .split(' ')
+        .map((part) => escapeRegExp(part))
+        .join('\\s+');
+
+      const matchingProfiles = await Profile.find({
+        fullName: { $regex: new RegExp(`^${namePattern}$`, 'i') }
+      }).select('userId');
+
+      if (matchingProfiles.length > 0) {
+        const candidateUserIds = [...new Set(matchingProfiles.map((profile) => String(profile.userId)))];
+        const candidateUsers = await User.find({ _id: { $in: candidateUserIds } }).select('+passwordHash');
+
+        for (const candidateUser of candidateUsers) {
+          const isCandidatePasswordValid = await bcrypt.compare(password, candidateUser.passwordHash);
+
+          if (isCandidatePasswordValid) {
+            user = candidateUser;
+            passwordAlreadyValidated = true;
+            break;
+          }
+        }
       }
     }
 
@@ -54,7 +77,9 @@ const login = async (identifier, password) => {
     }
 
     // Verify password using bcrypt.compare() (Requirement 1.4)
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = passwordAlreadyValidated
+      ? true
+      : await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
       // Generic error message to prevent email enumeration (Requirement 1.2)

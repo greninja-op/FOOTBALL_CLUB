@@ -29,6 +29,7 @@ const SquadHealth = () => {
   });
 
   const getUserId = (player) => player?.userId?._id || player?.userId;
+  const fitnessStatuses = ['Green', 'Yellow', 'Red'];
 
   useEffect(() => {
     fetchPlayers();
@@ -194,20 +195,33 @@ const SquadHealth = () => {
                     </div>
                   </div>
 
-                  <UiSelect
-                    value={player.fitnessStatus || 'Green'}
-                    onChange={(event) => updateFitnessInline(player, event.target.value)}
-                    disabled={updatingFitnessPlayerId === player._id}
-                    className={`min-w-[7.5rem] ${
-                      player.fitnessStatus === 'Green' ? 'border-green-500/30 bg-green-900/25 text-green-200' :
-                      player.fitnessStatus === 'Yellow' ? 'border-yellow-500/30 bg-yellow-900/25 text-yellow-200' :
-                      'border-red-500/30 bg-red-900/25 text-red-200'
-                    }`}
-                  >
-                    <option value="Green">Green</option>
-                    <option value="Yellow">Yellow</option>
-                    <option value="Red">Red</option>
-                  </UiSelect>
+                  <div className="w-[11.25rem] rounded-xl border border-white/15 bg-gray-900/50 p-1">
+                    <div className="grid grid-cols-3 gap-1">
+                      {fitnessStatuses.map((status) => {
+                        const isActive = (player.fitnessStatus || 'Green') === status;
+
+                        return (
+                          <button
+                            key={`${player._id}-${status}`}
+                            type="button"
+                            onClick={() => updateFitnessInline(player, status)}
+                            disabled={updatingFitnessPlayerId === player._id}
+                            className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                              isActive
+                                ? status === 'Green'
+                                  ? 'border border-green-500/35 bg-green-900/50 text-green-100'
+                                  : status === 'Yellow'
+                                    ? 'border border-yellow-500/35 bg-yellow-900/50 text-yellow-100'
+                                    : 'border border-red-500/35 bg-red-900/50 text-red-100'
+                                : 'border border-transparent bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/85'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-3 flex gap-2">

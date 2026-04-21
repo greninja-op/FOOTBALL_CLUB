@@ -572,8 +572,16 @@ const updateStats = async (req, res) => {
     // Emit Socket.io event for real-time updates
     const { getIO } = require('../utils/socketIO');
     const io = getIO();
+
+    const recipientUserId = profile.userId?.toString
+      ? profile.userId.toString()
+      : String(userId);
+
     io.emit('stats:updated', {
       playerId: userId,
+      recipientUserId,
+      updatedByUserId: req.user.id,
+      playerName: profile.fullName,
       stats: profile.stats,
       fullName: profile.fullName
     });

@@ -740,11 +740,12 @@ const TacticalBoard = () => {
                     className="mt-2 w-full rounded bg-gray-800/40 border border-white/20 text-white px-2 py-1 text-xs placeholder-gray-500"
                     placeholder="Manual note"
                   />
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap items-stretch gap-2">
                     <UiButton
                       onClick={() => submitAvailabilityOverride(player.id, 'unavailable')}
                       variant="danger"
                       size="sm"
+                      className="min-w-0 flex-1 text-[11px] leading-tight"
                     >
                       Mark Unavailable
                     </UiButton>
@@ -752,6 +753,7 @@ const TacticalBoard = () => {
                       onClick={() => submitAvailabilityOverride(player.id, 'auto')}
                       variant="secondary"
                       size="sm"
+                      className="shrink-0 px-3"
                     >
                       Auto
                     </UiButton>
