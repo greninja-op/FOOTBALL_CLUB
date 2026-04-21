@@ -18,7 +18,7 @@ const TrainingSchedule = () => {
   const [sessions, setSessions] = useState([]);
   const [players, setPlayers] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -124,7 +124,7 @@ const TrainingSchedule = () => {
       
       if (data.success) {
         setSuccess('Training session created successfully');
-        setShowCreateModal(false);
+        setShowCreateForm(false);
         setFormData({ date: '', drillDescription: '', duration: 90 });
         fetchSessions();
         setTimeout(() => setSuccess(''), 3000);
@@ -185,11 +185,77 @@ const TrainingSchedule = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Training Schedule</h2>
         <UiButton
-          onClick={() => setShowCreateModal(true)}
-          variant="primary"
+          onClick={() => setShowCreateForm((current) => !current)}
+          variant={showCreateForm ? 'secondary' : 'primary'}
         >
-          Create Session
+          {showCreateForm ? 'Close Form' : 'Create Session'}
         </UiButton>
+      </div>
+
+      <div className="ui-inline-expand mb-4" data-open={showCreateForm}>
+        <div className="ui-expand-card p-4">
+          <h3 className="text-xl font-bold mb-4 text-white">Create Training Session</h3>
+          <form onSubmit={handleCreateSession}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Date & Time
+              </label>
+              <UiCalendarInput
+                type="datetime-local"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Drill Description
+              </label>
+              <textarea
+                value={formData.drillDescription}
+                onChange={(e) => setFormData({ ...formData, drillDescription: e.target.value })}
+                className="ui-textarea"
+                rows="3"
+                minLength="10"
+                maxLength="500"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Duration (minutes)
+              </label>
+              <input
+                type="number"
+                value={formData.duration}
+                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
+                className="ui-field"
+                min="30"
+                max="300"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <UiButton type="submit" variant="primary">
+                Create
+              </UiButton>
+              <UiButton
+                type="button"
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setFormData({ date: '', drillDescription: '', duration: 90 });
+                  setError('');
+                }}
+                variant="secondary"
+              >
+                Cancel
+              </UiButton>
+            </div>
+          </form>
+        </div>
       </div>
 
       {/* Training Sessions Calendar */}
@@ -276,75 +342,6 @@ const TrainingSchedule = () => {
         )}
       </div>
 
-      {/* Create Session Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg p-4 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-white">Create Training Session</h3>
-            <form onSubmit={handleCreateSession}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Date & Time
-                </label>
-                <UiCalendarInput
-                  type="datetime-local"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Drill Description
-                </label>
-                <textarea
-                  value={formData.drillDescription}
-                  onChange={(e) => setFormData({ ...formData, drillDescription: e.target.value })}
-                  className="ui-textarea"
-                  rows="3"
-                  minLength="10"
-                  maxLength="500"
-                  required
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                  className="ui-field"
-                  min="30"
-                  max="300"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <UiButton type="submit" variant="primary" className="flex-1">
-                  Create
-                </UiButton>
-                <UiButton
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setFormData({ date: '', drillDescription: '', duration: 90 });
-                    setError('');
-                  }}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Cancel
-                </UiButton>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

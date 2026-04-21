@@ -65,7 +65,10 @@ const NotificationCenter = () => {
         return `Injury logged: ${event.data.injuryType || 'Injury recorded'}`
       
       case 'stats:updated':
-        return 'Your performance stats have been updated'
+        if (event.data?.playerName) {
+          return `${event.data.playerName}'s performance stats have been updated`
+        }
+        return 'Performance stats have been updated'
       
       case 'inventory:assigned':
         return `Equipment assigned: ${event.data.itemName || 'Item'}`

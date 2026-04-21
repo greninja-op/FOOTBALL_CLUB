@@ -38,10 +38,11 @@ const SystemLog = require('../models/SystemLog');
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const identifier = req.body?.identifier || req.body?.email;
+    const { password } = req.body;
 
     // Validate request body
-    if (!email || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({
         error: 'Validation error',
         message: 'Email and password are required'
@@ -49,7 +50,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Call controller login function
-    const result = await authController.login(email, password);
+    const result = await authController.login(identifier, password);
 
     await SystemLog.create({
       action: 'LOGIN',

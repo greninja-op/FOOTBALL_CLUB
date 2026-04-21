@@ -215,7 +215,7 @@ const updateSettings = async (req, res) => {
  * @access Admin only
  */
 const uploadLogo = async (req, res) => {
-  let optimizedPath = null;
+  let generatedOptimizedPath = null;
 
   try {
     if (!req.file) {
@@ -226,26 +226,39 @@ const uploadLogo = async (req, res) => {
     }
 
     const filePath = req.file.path;
+    const uploadedFileName = req.file.filename;
     const optimizedFileName = `logo-${Date.now()}-${Math.round(Math.random() * 1E9)}.webp`;
     const logoDirectory = getLogoUploadDir();
-    optimizedPath = path.join(logoDirectory, optimizedFileName);
+    generatedOptimizedPath = path.join(logoDirectory, optimizedFileName);
+
+    let finalLogoPath = filePath;
+    let finalLogoFileName = uploadedFileName;
+
     await fs.mkdir(logoDirectory, { recursive: true });
 
-    // Always convert to webp to avoid extension/format mismatch issues.
-    await sharp(filePath)
-      .rotate()
-      .resize(1920, null, { // Max width 1920px, maintain aspect ratio
-        withoutEnlargement: true,
-        fit: 'inside'
-      })
-      .webp({ quality: 86 })
-      .toFile(optimizedPath);
+    try {
+      // Prefer optimized webp, but keep original upload if optimization fails.
+      await sharp(filePath)
+        .rotate()
+        .resize(1920, null, {
+          withoutEnlargement: true,
+          fit: 'inside'
+        })
+        .webp({ quality: 86 })
+        .toFile(generatedOptimizedPath);
 
-    // Delete original file
-    await fs.unlink(filePath);
+      await fs.unlink(filePath);
+      finalLogoPath = generatedOptimizedPath;
+      finalLogoFileName = optimizedFileName;
+    } catch (optimizationError) {
+      console.warn('Logo optimization failed, keeping original upload:', optimizationError.message);
+      finalLogoPath = filePath;
+      finalLogoFileName = uploadedFileName;
+      generatedOptimizedPath = null;
+    }
 
     // Generate URL for the optimized file
-    const logoUrl = `/uploads/logos/${optimizedFileName}`;
+    const logoUrl = `/uploads/logos/${finalLogoFileName}`;
 
     // Update settings with new logo URL
     const settings = await Settings.getSingleton();
@@ -256,7 +269,7 @@ const uploadLogo = async (req, res) => {
       const oldLogoPath = path.join(getUploadRoot(), oldRelativePath);
 
       try {
-        if (oldLogoPath !== optimizedPath) {
+        if (oldLogoPath !== finalLogoPath) {
           await fs.unlink(oldLogoPath);
         }
       } catch (error) {
@@ -294,9 +307,9 @@ const uploadLogo = async (req, res) => {
       }
     }
 
-    if (optimizedPath) {
+    if (generatedOptimizedPath) {
       try {
-        await fs.unlink(optimizedPath);
+        await fs.unlink(generatedOptimizedPath);
       } catch (optimizedCleanupError) {
         // Best-effort cleanup only.
       }

@@ -48,8 +48,7 @@ const LoginPage = () => {
     }
 
     setLoading(true)
-    // Send identifier as email - backend will handle name-based login
-    const loginIdentifier = identifier.toLowerCase().trim()
+    const loginIdentifier = identifier.trim()
     const result = await login(loginIdentifier, password)
     setLoading(false)
 

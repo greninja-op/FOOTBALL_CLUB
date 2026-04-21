@@ -116,6 +116,19 @@ export const SocketProvider = ({ children }) => {
     // 6. stats:updated
     newSocket.on('stats:updated', (data) => {
       console.log('Received stats:updated event:', data)
+
+      const currentUserId = user?.id ? String(user.id) : null
+      const recipientUserId = data?.recipientUserId ? String(data.recipientUserId) : null
+      const updatedByUserId = data?.updatedByUserId ? String(data.updatedByUserId) : null
+
+      if (recipientUserId && currentUserId && recipientUserId !== currentUserId) {
+        return
+      }
+
+      if (updatedByUserId && currentUserId && updatedByUserId === currentUserId) {
+        return
+      }
+
       addEvent('stats:updated', data)
     })
 

@@ -17,6 +17,9 @@
   --color-text-muted:    rgba(255,255,255,0.38);
   --color-border:        rgba(255,255,255,0.07);
   --color-glass:         rgba(255,255,255,0.04);
+  --scroll-track:        rgba(255,255,255,0.06);
+  --scroll-thumb:        rgba(200,16,46,0.72);
+  --scroll-thumb-hover:  rgba(212,175,55,0.78);
 }
 
 html {
@@ -989,29 +992,65 @@ table {
   overflow: hidden;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scroll-thumb), rgba(160,12,34,0.72));
+  border-radius: 999px;
+  border: 2px solid rgba(10,10,24,0.9);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scroll-thumb-hover), rgba(200,16,46,0.86));
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(200, 16, 46, 0.65) rgba(255,255,255,0.06);
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.05);
+  background: var(--scroll-track);
   border-radius: 999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(200,16,46,0.75), rgba(212,175,55,0.55));
+  background: linear-gradient(180deg, var(--scroll-thumb), rgba(160,12,34,0.72));
   border-radius: 999px;
   border: 2px solid rgba(10,10,24,0.9);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(200,16,46,0.9);
+  background: linear-gradient(180deg, var(--scroll-thumb-hover), rgba(200,16,46,0.86));
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .no-scrollbar {
