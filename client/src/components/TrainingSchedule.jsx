@@ -194,7 +194,7 @@ const TrainingSchedule = () => {
 
       <div className="ui-inline-expand mb-4" data-open={showCreateForm}>
         <div className="ui-expand-card p-4">
-          <h3 className="text-xl font-bold mb-4 text-white">Create Training Session</h3>
+          <h3 className="mb-3 text-lg font-semibold text-white">Create Training Session</h3>
           <form onSubmit={handleCreateSession}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">

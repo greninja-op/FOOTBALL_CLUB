@@ -406,7 +406,7 @@ const FinanceDashboard = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`rounded-md px-3 py-2 text-sm transition ${
+              className={`rounded-lg px-3 py-2 text-sm transition ${
                 activeTab === tab ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-white/10'
               }`}
             >

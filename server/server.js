@@ -4,12 +4,30 @@ const dotenv = require('dotenv');
 const http = require('http');
 const helmet = require('helmet');
 const compression = require('compression');
+const path = require('path');
+const fs = require('fs').promises;
 const { connectDB } = require('./config/database');
 const { initializeSocketServer } = require('./socketServer');
 const { setIO } = require('./utils/socketIO');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
 dotenv.config();
+
+// Ensure uploads directory exists
+const ensureUploadsDirectory = async () => {
+  const uploadDir = process.env.UPLOAD_DIR || './uploads';
+  const logoDir = path.join(uploadDir, 'logos');
+  const documentsDir = path.join(uploadDir, 'documents');
+
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.mkdir(logoDir, { recursive: true });
+    await fs.mkdir(documentsDir, { recursive: true });
+    console.log('✓ Uploads directories initialized');
+  } catch (error) {
+    console.error('✗ Failed to create uploads directories:', error.message);
+  }
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -49,7 +67,8 @@ app.use(compression());
 app.use(cors({
   origin: [
     process.env.CLIENT_URL || 'http://localhost:5173',
-    'http://localhost:5174' // Allow alternate port if 5173 is in use
+    'http://localhost:5174', // Allow alternate port if 5173 is in use
+    'http://localhost:5175' // Allow alternate port if 5173/5174 are in use
   ],
   credentials: true
 }));
@@ -120,9 +139,12 @@ const PORT = process.env.PORT || 5000;
 // Initialize database connection before starting server
 const startServer = async () => {
   try {
+    // Ensure uploads directories exist
+    await ensureUploadsDirectory();
+
     // Connect to MongoDB
     await connectDB();
-    
+
     // Start server only after successful database connection
     server.listen(PORT, () => {
       console.log(`✓ Server running on port ${PORT}`);

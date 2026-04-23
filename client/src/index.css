@@ -901,14 +901,16 @@ input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {
   color-scheme: dark;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(18,24,38,0.74);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 0.9rem;
   color: white;
   padding: 0.75rem 0.95rem;
   min-height: 2.9rem;
   width: 100%;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
 input[type="date"]:focus,
@@ -917,32 +919,42 @@ input[type="time"]:focus {
   outline: none;
   border-color: rgba(200,16,46,0.5);
   box-shadow: 0 0 0 3px rgba(200,16,46,0.14);
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(0.7);
+  filter: invert(1) brightness(0.7) sepia(1) saturate(0.5) hue-rotate(340deg);
   cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 
 /* ─── Dark-themed Select Dropdown Options ────────────────── */
 .ui-select option,
 select option {
-  background: #0f0f1e;
+  background: rgba(15,15,30,0.95);
   color: #e0e0e0;
-  padding: 8px 12px;
+  padding: 10px 14px;
+  border-radius: 0.5rem;
 }
 
 .ui-select option:checked,
 select option:checked {
-  background: rgba(200,16,46,0.3);
+  background: linear-gradient(135deg, rgba(200,16,46,0.4), rgba(160,12,34,0.5));
   color: white;
+  font-weight: 600;
 }
 
 .ui-select option:hover,
 select option:hover {
-  background: rgba(200,16,46,0.2);
+  background: linear-gradient(135deg, rgba(200,16,46,0.25), rgba(160,12,34,0.3));
+  color: white;
 }
 
 /* Any select that isn't .ui-select should also get dark theme */
@@ -970,18 +982,18 @@ table {
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 *::-webkit-scrollbar-track {
   background: var(--scroll-track);
-  border-radius: 999px;
+  border-radius: 12px;
 }
 
 *::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--scroll-thumb), rgba(160,12,34,0.72));
-  border-radius: 999px;
+  border-radius: 12px;
   border: 2px solid rgba(10,10,24,0.9);
 }
 
@@ -995,18 +1007,18 @@ table {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: var(--scroll-track);
-  border-radius: 999px;
+  border-radius: 12px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--scroll-thumb), rgba(160,12,34,0.72));
-  border-radius: 999px;
+  border-radius: 12px;
   border: 2px solid rgba(10,10,24,0.9);
 }
 

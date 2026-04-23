@@ -703,7 +703,7 @@ const TacticalBoard = () => {
                   <input
                     value={overrideDrafts[player.id] || ''}
                     onChange={(event) => updateOverrideDraft(player.id, event.target.value)}
-                    className="mt-3 w-full rounded bg-gray-800/40 border border-white/20 text-white px-2 py-1 text-xs placeholder-gray-500"
+                    className="mt-3 w-full rounded bg-gray-800/40 border border-white/20 text-white px-3 py-2 text-xs placeholder-gray-500 overflow-hidden text-ellipsis"
                     placeholder="Manual note for override"
                   />
                   <div className="mt-2 flex gap-2">
@@ -737,7 +737,7 @@ const TacticalBoard = () => {
                   <input
                     value={overrideDrafts[player.id] || ''}
                     onChange={(event) => updateOverrideDraft(player.id, event.target.value)}
-                    className="mt-2 w-full rounded bg-gray-800/40 border border-white/20 text-white px-2 py-1 text-xs placeholder-gray-500"
+                    className="mt-2 w-full rounded bg-gray-800/40 border border-white/20 text-white px-3 py-2 text-xs placeholder-gray-500 overflow-hidden text-ellipsis"
                     placeholder="Manual note"
                   />
                   <div className="mt-2 flex flex-wrap items-stretch gap-2">

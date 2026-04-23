@@ -99,16 +99,19 @@ const PageTransition = ({ children }) => {
         alt="Club crest"
         className={`logo-half ${phase === 'holding' ? 'logo-pulse' : ''}`}
         style={{
-          width: 100,
-          height: 100,
+          width: 120,
+          height: 120,
           objectFit: 'contain',
-          position: 'absolute',
-          right: 0,
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-100%, -50%)',
           clipPath: isMobile ? 'inset(0 0 50% 0)' : 'inset(0 50% 0 0)',
         }}
       />
     ) : (
       <div
+        className="logo-fallback"
         style={{
           position: 'absolute',
           right: 0,
@@ -134,11 +137,13 @@ const PageTransition = ({ children }) => {
         alt="Club crest"
         className={phase === 'holding' ? 'logo-pulse' : ''}
         style={{
-          width: 100,
-          height: 100,
+          width: 120,
+          height: 120,
           objectFit: 'contain',
-          position: 'absolute',
-          left: 0,
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(0, -50%)',
           clipPath: isMobile ? 'inset(50% 0 0 0)' : 'inset(0 0 0 50%)',
         }}
       />

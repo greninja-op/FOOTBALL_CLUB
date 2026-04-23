@@ -218,23 +218,12 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
           </div>
 
           {showMenu && (
-            <nav ref={menuShellRef} className="nav-menu-shell hidden items-center justify-center md:flex">
-              <span
-                className="nav-menu-highlight"
-                style={{
-                  transform: `translateX(${menuHighlight.left}px)`,
-                  width: menuHighlight.width,
-                  opacity: menuHighlight.opacity
-                }}
-              />
+            <nav className="hidden gap-10 md:flex">
               {menuItems.map(item => (
                   <button
                     key={item.id}
-                    ref={(node) => {
-                      menuItemRefs.current[item.id] = node
-                    }}
                     onClick={() => onMenuClick && onMenuClick(item.id)}
-                    className={`nav-menu-item px-4 py-2 ${activeMenuId === item.id ? 'is-active' : ''}`}
+                    className="nav-link text-white"
                     style={{
                       fontSize: 10,
                       fontFamily: "'Bebas Neue', sans-serif",
@@ -243,7 +232,9 @@ const Navbar = ({ menuItems, activeSection, onMenuClick }) => {
                       cursor: 'pointer',
                       background: 'transparent',
                       border: 'none',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      opacity: activeMenuId === item.id ? 1 : 0.55,
+                      transition: 'opacity 0.3s'
                     }}
                   >
                     {item.label}

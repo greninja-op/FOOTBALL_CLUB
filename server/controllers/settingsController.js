@@ -217,8 +217,18 @@ const updateSettings = async (req, res) => {
 const uploadLogo = async (req, res) => {
   let generatedOptimizedPath = null;
 
+  console.log('🚀 Logo upload request received');
+  console.log('📦 Request file:', req.file ? {
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+    path: req.file.path,
+    filename: req.file.filename
+  } : 'No file');
+
   try {
     if (!req.file) {
+      console.error('❌ No file uploaded in request');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
@@ -231,13 +241,18 @@ const uploadLogo = async (req, res) => {
     const logoDirectory = getLogoUploadDir();
     generatedOptimizedPath = path.join(logoDirectory, optimizedFileName);
 
+    console.log('📁 Logo directory:', logoDirectory);
+    console.log('🎯 Optimized file path:', generatedOptimizedPath);
+
     let finalLogoPath = filePath;
     let finalLogoFileName = uploadedFileName;
 
     await fs.mkdir(logoDirectory, { recursive: true });
+    console.log('✅ Logo directory created/verified');
 
     try {
       // Prefer optimized webp, but keep original upload if optimization fails.
+      console.log('🔧 Starting image optimization with Sharp...');
       await sharp(filePath)
         .rotate()
         .resize(1920, null, {
@@ -247,11 +262,12 @@ const uploadLogo = async (req, res) => {
         .webp({ quality: 86 })
         .toFile(generatedOptimizedPath);
 
+      console.log('✅ Image optimization successful');
       await fs.unlink(filePath);
       finalLogoPath = generatedOptimizedPath;
       finalLogoFileName = optimizedFileName;
     } catch (optimizationError) {
-      console.warn('Logo optimization failed, keeping original upload:', optimizationError.message);
+      console.warn('⚠️ Logo optimization failed, keeping original upload:', optimizationError.message);
       finalLogoPath = filePath;
       finalLogoFileName = uploadedFileName;
       generatedOptimizedPath = null;
@@ -259,28 +275,43 @@ const uploadLogo = async (req, res) => {
 
     // Generate URL for the optimized file
     const logoUrl = `/uploads/logos/${finalLogoFileName}`;
+    console.log('🔗 Generated logo URL:', logoUrl);
 
     // Update settings with new logo URL
+    console.log('📝 Fetching settings...');
     const settings = await Settings.getSingleton();
-    
+    console.log('✅ Settings retrieved');
+
     // Delete old logo file if exists
     if (settings.logoUrl) {
+      console.log('🗑️ Deleting old logo:', settings.logoUrl);
       const oldRelativePath = settings.logoUrl.replace(/^\/uploads\//, '');
       const oldLogoPath = path.join(getUploadRoot(), oldRelativePath);
 
       try {
         if (oldLogoPath !== finalLogoPath) {
           await fs.unlink(oldLogoPath);
+          console.log('✅ Old logo deleted');
         }
       } catch (error) {
         // Ignore if file doesn't exist
-        console.log('Old logo file not found or already deleted');
+        console.log('ℹ️ Old logo file not found or already deleted:', error.message);
       }
     }
 
     settings.logoUrl = logoUrl;
     settings.updatedBy = req.user.id;
+
+    // Filter out empty trophy entries to prevent validation errors during logo upload
+    if (settings.trophies && settings.trophies.length > 0) {
+      settings.trophies = settings.trophies.filter(trophy =>
+        trophy.competitionName && trophy.competitionName.trim() !== '' &&
+        trophy.year && trophy.year.trim() !== ''
+      );
+    }
+
     await settings.save();
+    console.log('✅ Settings updated with new logo URL');
 
     // Emit Socket.io event
     const { getIO } = require('../utils/socketIO');
@@ -289,29 +320,35 @@ const uploadLogo = async (req, res) => {
       clubName: settings.clubName,
       logoUrl: settings.logoUrl
     });
+    console.log('📡 Socket.io event emitted');
 
     res.status(200).json({
       success: true,
       message: 'Logo uploaded and optimized successfully',
       logoUrl: logoUrl
     });
+    console.log('✅ Logo upload completed successfully');
   } catch (error) {
-    console.error('Upload logo error:', error);
+    console.error('❌ Upload logo error:', error);
+    console.error('❌ Error stack:', error.stack);
     
     // Clean up uploaded files on error
     if (req.file) {
       try {
         await fs.unlink(req.file.path);
+        console.log('🗑️ Cleaned up uploaded file');
       } catch (unlinkError) {
-        console.error('Error deleting failed upload:', unlinkError);
+        console.error('❌ Error deleting failed upload:', unlinkError);
       }
     }
 
     if (generatedOptimizedPath) {
       try {
         await fs.unlink(generatedOptimizedPath);
+        console.log('🗑️ Cleaned up optimized file');
       } catch (optimizedCleanupError) {
         // Best-effort cleanup only.
+        console.error('❌ Error cleaning up optimized file:', optimizedCleanupError);
       }
     }
 

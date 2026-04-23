@@ -234,15 +234,31 @@ const ClubSettings = () => {
   };
 
   const handleUploadLogo = async () => {
-    if (!logoFile) return;
+    if (!logoFile) {
+      console.error('❌ Logo upload failed: No file selected');
+      return;
+    }
+
+    console.log('🚀 Starting logo upload...', {
+      fileName: logoFile.name,
+      fileSize: logoFile.size,
+      fileType: logoFile.type
+    });
 
     setUploading(true);
     setErrors({});
 
     try {
       const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('❌ Logo upload failed: No auth token found');
+        throw new Error('Authentication token missing');
+      }
+
       const formData = new FormData();
       formData.append('logo', logoFile);
+
+      console.log('📤 Sending upload request to:', `${API_URL}/api/settings/logo`);
 
       const response = await fetch(`${API_URL}/api/settings/logo`, {
         method: 'POST',
@@ -250,24 +266,31 @@ const ClubSettings = () => {
         body: formData
       });
 
+      console.log('📥 Upload response status:', response.status, response.statusText);
+
       let data = null;
       try {
         data = await response.json();
+        console.log('📦 Response data:', data);
       } catch (parseError) {
+        console.error('❌ Failed to parse response JSON:', parseError);
         data = null;
       }
 
       if (!response.ok) {
+        console.error('❌ Upload request failed:', response.status, data);
         throw new Error(data?.message || 'Failed to upload logo');
       }
 
       const uploadedLogoUrl = data.logoUrl ? `${data.logoUrl}?v=${Date.now()}` : data.logoUrl;
+      console.log('✅ Logo uploaded successfully:', uploadedLogoUrl);
       setSettings(prev => ({ ...prev, logoUrl: uploadedLogoUrl }));
       setLogoFile(null);
       setLogoPreview(null);
       showToast('Logo uploaded successfully');
       fetchSettings();
     } catch (err) {
+      console.error('❌ Logo upload error:', err);
       showToast(err.message, 'error');
     } finally {
       setUploading(false);
